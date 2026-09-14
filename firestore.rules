@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isMasterAdmin() {
+      return isSignedIn() && 'email' in request.auth.token && (
+        request.auth.token.email == 'admin@cbmms.internal' ||
+        request.auth.token.email == '123456@cbmms.internal' ||
+        request.auth.token.email == 'paulorenato252012@gmail.com'
+      );
+    }
+    
+    function isAdmin() { 
+      return isSignedIn() && (
+        isMasterAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().perfil == 'ADMINISTRADOR')
+      ); 
+    }
+
+    function isLogistica() { 
+      return isSignedIn() && (
+        isMasterAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().perfil in ['LOGISTICA', 'ADMINISTRADOR'])
+      ); 
+    }
+
+    function isMilitar() { 
+      return isSignedIn(); 
+    }
+
+    // User accounts
+    match /users/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // System configuration & testing
+    match /system/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+
+    // Cycles
+    match /cycles/{cycleId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Vehicles
+    match /vehicles/{vehicleId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Material Catalog
+    match /materialCatalog/{materialId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Advanced Bases
+    match /advancedBases/{baseId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Caution Validation
+    function isValidCaution(data) {
+      return data.keys().hasAll(['type', 'status', 'responsibleUserId'])
+          && data.type in ['MATERIAL_PADRONIZADO', 'VIATURA', 'ESPECIFICA']
+          && data.status in ['RASCUNHO', 'AGUARDANDO_ASSINATURA_MILITAR', 'CAUTELADA', 'DEVOLUCAO_INICIADA', 'AGUARDANDO_RECEBIMENTO_LOGISTICA', 'DESCAUTELADA', 'CANCELADA', 'COM_DIVERGENCIA']
+          && data.responsibleUserId is string && data.responsibleUserId.size() <= 128;
+    }
+
+    // Cautions
+    match /cautions/{cautionId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(cautionId) && isValidCaution(incoming());
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && (
+        isAdmin() || 
+        (existing().responsibleUserId == request.auth.uid && existing().status == 'RASCUNHO')
+      );
+      
+      // Subcollections inside cautions
+      match /items/{itemId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isSignedIn();
+      }
+
+      match /signatures/{sigId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isSignedIn();
+      }
+
+      match /generatedDocuments/{docId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isSignedIn();
+      }
+    }
+
+    // Collection Group rules (for querying items, signatures, generatedDocuments across cautions)
+    match /{path=**}/items/{itemId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+    match /{path=**}/signatures/{sigId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+    match /{path=**}/generatedDocuments/{docId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Direct items & catalog fallback collection
+    match /caution_items/{itemId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Audit logs & Audit events
+    match /audit_logs/{logId} {
+      allow read, write: if isSignedIn();
+    }
+    match /auditEvents/{eventId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

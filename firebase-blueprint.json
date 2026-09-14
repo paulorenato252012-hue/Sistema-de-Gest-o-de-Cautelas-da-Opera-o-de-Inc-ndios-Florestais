@@ -1,0 +1,223 @@
+{
+  "entities": {
+    "AdvancedBase": {
+      "title": "Advanced Base",
+      "description": "Pre-configured base with standard materials",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 200 },
+        "defaultMaterials": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 }
+        },
+        "active": { "type": "boolean" }
+      },
+      "required": ["name", "active"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile with RBAC",
+      "type": "object",
+      "properties": {
+        "matricula": { "type": "string", "maxLength": 50 },
+        "nomeCompleto": { "type": "string", "maxLength": 150 },
+        "nomeGuerra": { "type": "string", "maxLength": 50 },
+        "postoGraduacao": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 100 },
+        "unidade": { "type": "string", "maxLength": 100 },
+        "perfil": { "type": "string", "enum": ["MILITAR", "LOGISTICA", "ADMINISTRADOR"] },
+        "passwordChangeRequired": { "type": "boolean" },
+        "termsAccepted": { "type": "boolean" },
+        "termsVersion": { "type": "string", "maxLength": 20 },
+        "termsAcceptedAt": { "type": "string" },
+        "ativo": { "type": "boolean" }
+      },
+      "required": ["matricula", "nomeCompleto", "perfil", "ativo"]
+    },
+    "Cycle": {
+      "title": "Cycle",
+      "description": "Operational cycle",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "bases": { "type": "array", "items": { "type": "string", "maxLength": 100 } },
+        "status": { "type": "string", "enum": ["PLANEJAMENTO", "ABERTO", "EM_DEVOLUCAO", "ENCERRADO"] },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["name", "startDate", "endDate", "status", "createdAt", "createdBy"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Vehicle catalog",
+      "type": "object",
+      "properties": {
+        "prefixo": { "type": "string", "maxLength": 50 },
+        "placa": { "type": "string", "maxLength": 20 },
+        "modelo": { "type": "string", "maxLength": 100 },
+        "unidade": { "type": "string", "maxLength": 100 },
+        "ativo": { "type": "boolean" }
+      },
+      "required": ["prefixo", "placa", "ativo"]
+    },
+    "MaterialCatalog": {
+      "title": "Material Catalog",
+      "description": "Catalog of materials",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "maxLength": 150 },
+        "tipo": { "type": "string", "enum": ["PADRONIZADO", "ESPECIFICO"] },
+        "ativo": { "type": "boolean" }
+      },
+      "required": ["nome", "tipo", "ativo"]
+    },
+    "Caution": {
+      "title": "Caution",
+      "description": "A caution record",
+      "type": "object",
+      "properties": {
+        "cycleId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["MATERIAL_PADRONIZADO", "VIATURA", "ESPECIFICA"] },
+        "status": { "type": "string", "enum": ["RASCUNHO", "AGUARDANDO_ASSINATURA_MILITAR", "CAUTELADA", "DEVOLUCAO_INICIADA", "AGUARDANDO_RECEBIMENTO_LOGISTICA", "DESCAUTELADA", "CANCELADA", "COM_DIVERGENCIA"] },
+        "responsibleUserId": { "type": "string", "maxLength": 128 },
+        "logisticsReceiverId": { "type": "string", "maxLength": 128 },
+        "unitGcif": { "type": "string", "maxLength": 100 },
+        "base": { "type": "string", "maxLength": 100 },
+        "vehicleId": { "type": "string", "maxLength": 128 },
+        "vehiclePrefixo": { "type": "string", "maxLength": 50 },
+        "vehiclePlaca": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string" },
+        "signedAt": { "type": "string" },
+        "returnStartedAt": { "type": "string" },
+        "receivedAt": { "type": "string" },
+        "version": { "type": "number" },
+        "documentHash": { "type": "string", "maxLength": 100 },
+        "commanderName": { "type": "string", "maxLength": 150 },
+        "commanderEmail": { "type": "string", "maxLength": 150 },
+        "localEmpenhado": { "type": "string", "maxLength": 150 },
+        "localConferencia": { "type": "string", "maxLength": 150 },
+        "driverName": { "type": "string", "maxLength": 150 },
+        "kmCurrent": { "type": "number" },
+        "kmNextOilChange": { "type": "number" }
+      },
+      "required": ["cycleId", "type", "status", "responsibleUserId", "unitGcif", "base", "createdAt", "version"]
+    },
+    "CautionItem": {
+      "title": "Caution Item",
+      "description": "An item within a caution",
+      "type": "object",
+      "properties": {
+        "description": { "type": "string", "maxLength": 200 },
+        "quantity": { "type": "number" },
+        "identification": { "type": "string", "maxLength": 100 },
+        "unit": { "type": "string", "maxLength": 50 },
+        "conditionWithdrawal": { "type": "string", "maxLength": 100 },
+        "observationWithdrawal": { "type": "string", "maxLength": 500 },
+        "quantityReturned": { "type": "number" },
+        "conditionReturn": { "type": "string", "maxLength": 50 },
+        "observationReturn": { "type": "string", "maxLength": 500 },
+        "photosReturn": { "type": "array", "items": { "type": "string", "maxLength": 500 } }
+      },
+      "required": ["description", "conditionWithdrawal"]
+    },
+    "Signature": {
+      "title": "Signature",
+      "description": "Signature record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "maskedMatricula": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 150 },
+        "postoGraduacao": { "type": "string", "maxLength": 50 },
+        "role": { "type": "string", "maxLength": 50 },
+        "signedAtUtc": { "type": "string" },
+        "signedAtLocal": { "type": "string", "maxLength": 50 },
+        "sessionId": { "type": "string", "maxLength": 100 },
+        "documentVersion": { "type": "number" },
+        "hashSha256": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "enum": ["RETIRADA", "DEVOLUCAO"] }
+      },
+      "required": ["userId", "maskedMatricula", "name", "signedAtUtc", "signedAtLocal", "documentVersion", "hashSha256", "type"]
+    },
+    "AuditEvent": {
+      "title": "Audit Event",
+      "description": "Audit trail record",
+      "type": "object",
+      "properties": {
+        "entityType": { "type": "string", "maxLength": 50 },
+        "entityId": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 50 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string" },
+        "details": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["entityType", "entityId", "action", "userId", "timestamp"]
+    },
+    "GeneratedDocument": {
+      "title": "Generated Document",
+      "description": "PDF generation metadata",
+      "type": "object",
+      "properties": {
+        "cautionId": { "type": "string", "maxLength": 128 },
+        "url": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "version": { "type": "number" },
+        "hashSha256": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["cautionId", "url", "createdAt", "version", "hashSha256"]
+    }
+  },
+  "firestore": {
+    "advancedBases/{baseId}": {
+      "schema": { "$ref": "#/entities/AdvancedBase" },
+      "description": "Pre-configured operational bases"
+    },
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User accounts with roles"
+    },
+    "cycles/{cycleId}": {
+      "schema": { "$ref": "#/entities/Cycle" },
+      "description": "Operational cycles"
+    },
+    "vehicles/{vehicleId}": {
+      "schema": { "$ref": "#/entities/Vehicle" },
+      "description": "Vehicles"
+    },
+    "materialCatalog/{materialId}": {
+      "schema": { "$ref": "#/entities/MaterialCatalog" },
+      "description": "Material catalog"
+    },
+    "cautions/{cautionId}": {
+      "schema": { "$ref": "#/entities/Caution" },
+      "description": "Cautions (equipment, vehicles, etc)"
+    },
+    "cautions/{cautionId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/CautionItem" },
+      "description": "Items within a caution"
+    },
+    "cautions/{cautionId}/signatures/{signatureId}": {
+      "schema": { "$ref": "#/entities/Signature" },
+      "description": "Signatures for a caution"
+    },
+    "auditEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/AuditEvent" },
+      "description": "System-wide audit trail"
+    },
+    "audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditEvent" },
+      "description": "Audit logs record"
+    },
+    "caution_items/{itemId}": {
+      "schema": { "$ref": "#/entities/CautionItem" },
+      "description": "Global catalog or index of caution items"
+    },
+    "generatedDocuments/{documentId}": {
+      "schema": { "$ref": "#/entities/GeneratedDocument" },
+      "description": "Generated PDFs metadata"
+    }
+  }
+}

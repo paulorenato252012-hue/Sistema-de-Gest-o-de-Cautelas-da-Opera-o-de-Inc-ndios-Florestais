@@ -1,0 +1,8 @@
+{
+  "name": "Cautelas CBMMS",
+  "description": "Sistema de controle de cautelas e descautelas de materiais e viaturas da operação de combate a incêndios florestais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

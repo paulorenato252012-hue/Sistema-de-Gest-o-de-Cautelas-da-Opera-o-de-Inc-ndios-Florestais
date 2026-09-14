@@ -1,0 +1,8 @@
+@import "tailwindcss";
+html.dark {
+  filter: invert(0.9) hue-rotate(180deg);
+  background-color: #111;
+}
+html.dark img, html.dark video {
+  filter: invert(1) hue-rotate(180deg);
+}

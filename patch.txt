@@ -1,0 +1,38 @@
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+              Base Operacional
+            </label>
+            <select
+              disabled={isReadOnly}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-red-500 focus:border-red-500 bg-white"
+              value={isCustomBase ? 'Outra' : (formData.base || BASES_PANTANAL[0])}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'Outra') {
+                  setIsCustomBase(true);
+                  handleInputChange('base', '');
+                } else {
+                  setIsCustomBase(false);
+                  handleInputChange('base', val);
+                }
+              }}
+            >
+              {BASES_PANTANAL.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+            {isCustomBase && (
+              <div className="mt-3">
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                  Especifique a Base Operacional
+                </label>
+                <input
+                  type="text"
+                  readOnly={isReadOnly}
+                  required
+                  placeholder="Digite o nome da base operacional"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-red-500 focus:border-red-500 bg-white"
+                  value={formData.base === 'Outra' ? '' : (formData.base || '')}
+                  onChange={e => handleInputChange('base', e.target.value)}
+                />
+              </div>
+            )}
