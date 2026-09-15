@@ -1,6 +1,13 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      const originalConsoleError = console.error;
+      console.error = function(...args) {
+        if (args.length > 0 && typeof args[0] === 'string' && args[0].includes('[vite]')) return;
+        originalConsoleError.apply(console, args);
+      };
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cautelas CBMMS</title>

@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { Cycle, User, MaterialCatalog, Vehicle, Caution, CautionItem, Signature } from '../lib/types';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
+import { logAudit } from '../lib/audit';
 import { 
   PlusCircle, 
   Edit2, 
@@ -154,7 +155,7 @@ function CycleManager() {
   
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: '', startDate: '', endDate: '', status: 'PLANEJAMENTO' as Cycle['status'] });
+  const [formData, setFormData] = useState({ name: '', startDate: '', endDate: '', status: 'ABERTO' as Cycle['status'] });
   
   // Expanded cycle state to see cautions inside
   const [expandedCycleId, setExpandedCycleId] = useState<string | null>(null);
@@ -207,10 +208,22 @@ function CycleManager() {
       }
       setShowForm(false);
       setEditingId(null);
-      setFormData({ name: '', startDate: '', endDate: '', status: 'PLANEJAMENTO' });
+      setFormData({ name: '', startDate: '', endDate: '', status: 'ABERTO' });
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar ciclo.');
+    }
+  };
+
+  const handleDeleteCycle = async (cycle: Cycle) => {
+    if (window.confirm(`Tem certeza que deseja EXCLUIR o ciclo "${cycle.name}"? Esta ação não pode ser desfeita.`)) {
+      try {
+        await deleteDoc(doc(db, 'cycles', cycle.id));
+        await logAudit('DELETE_CYCLE', userProfile, `Excluiu o ciclo "${cycle.name}" (ID: ${cycle.id})`);
+      } catch (err) {
+        console.error('Erro ao excluir ciclo:', err);
+        alert('Erro ao excluir o ciclo.');
+      }
     }
   };
 
@@ -305,7 +318,7 @@ function CycleManager() {
           onClick={() => {
             setShowForm(!showForm);
             setEditingId(null);
-            setFormData({ name: '', startDate: '', endDate: '', status: 'PLANEJAMENTO' });
+            setFormData({ name: '', startDate: '', endDate: '', status: 'ABERTO' });
           }} 
           className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 text-xs font-bold flex items-center shadow-xs transition-colors"
         >
@@ -323,9 +336,7 @@ function CycleManager() {
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Status</label>
             <select className="w-full border border-gray-300 rounded-lg p-2 text-sm" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as Cycle['status']})}>
-              <option value="PLANEJAMENTO">Planejamento</option>
               <option value="ABERTO">Aberto (Em Operação)</option>
-              <option value="EM_DEVOLUCAO">Em Devolução</option>
               <option value="ENCERRADO">Encerrado</option>
             </select>
           </div>
@@ -375,8 +386,6 @@ function CycleManager() {
                       <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${
                         cycle.status === 'ABERTO' 
                           ? 'bg-green-100 text-green-800 border-green-200' 
-                          : cycle.status === 'EM_DEVOLUCAO' 
-                          ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
                           : 'bg-gray-100 text-gray-800 border-gray-200'
                       }`}>
                         {cycle.status}
@@ -440,6 +449,15 @@ function CycleManager() {
                       title="Editar ciclo"
                     >
                       <Edit2 className="w-4 h-4" />
+                    </button>
+
+                    {/* Excluir ciclo */}
+                    <button 
+                      onClick={() => handleDeleteCycle(cycle)} 
+                      className="p-2 text-red-400 hover:text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                      title="Excluir ciclo"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>

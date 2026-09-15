@@ -74,7 +74,7 @@ export function MilitarPanel() {
 
   // Current active operational cycle from system
   const activeCycleObj = useMemo(() => {
-    return cyclesList.find(c => c.status === 'ABERTO' || c.status === 'EM_DEVOLUCAO');
+    return cyclesList.find(c => c.status === 'ABERTO');
   }, [cyclesList]);
 
   // Extract all distinct cycles present in user's cautions + system cycles

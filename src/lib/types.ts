@@ -22,7 +22,7 @@ export interface Cycle {
   startDate: string;
   endDate: string;
   bases: string[];
-  status: 'PLANEJAMENTO' | 'ABERTO' | 'EM_DEVOLUCAO' | 'ENCERRADO';
+  status: 'ABERTO' | 'ENCERRADO';
   createdAt: string;
   createdBy: string;
 }
