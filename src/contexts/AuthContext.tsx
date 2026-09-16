@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 unidade: 'QCG',
                 perfil: isAdmin ? 'ADMINISTRADOR' : 'MILITAR',
                 ativo: true,
-                passwordChangeRequired: false,
+                passwordChangeRequired: !isAdmin,
                 termsAccepted: isAdmin,
                 termsVersion: 'v1.0',
                 termsAcceptedAt: new Date().toISOString(),

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, getDocs, setDoc, getDoc, deleteDoc, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { db, auth } from '../lib/firebase';
 import { Cycle, User, MaterialCatalog, Vehicle, Caution, CautionItem, Signature } from '../lib/types';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
@@ -13,6 +14,7 @@ import {
   X, 
   Download, 
   Eye, 
+  EyeOff,
   ChevronDown, 
   ChevronUp, 
   FileCheck2, 
@@ -163,6 +165,11 @@ function CycleManager() {
   const [downloadingAllForCycle, setDownloadingAllForCycle] = useState<string | null>(null);
   const [descautelaCaution, setDescautelaCaution] = useState<Caution | null>(null);
 
+  // Estados de confirmação e notificação para exclusão de ciclo
+  const [cycleToDelete, setCycleToDelete] = useState<Cycle | null>(null);
+  const [deleteCycleLoading, setDeleteCycleLoading] = useState(false);
+  const [cycleNotification, setCycleNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   useEffect(() => {
     // 1. Listen to cycles
     const qCycles = query(collection(db, 'cycles'), orderBy('createdAt', 'desc'));
@@ -198,6 +205,7 @@ function CycleManager() {
     try {
       if (editingId) {
         await updateDoc(doc(db, 'cycles', editingId), { ...formData });
+        setCycleNotification({ type: 'success', message: `Ciclo "${formData.name}" atualizado com sucesso.` });
       } else {
         await addDoc(collection(db, 'cycles'), {
           ...formData,
@@ -205,25 +213,50 @@ function CycleManager() {
           createdAt: new Date().toISOString(),
           createdBy: userProfile?.id
         });
+        setCycleNotification({ type: 'success', message: `Novo ciclo "${formData.name}" cadastrado com sucesso.` });
       }
+      setTimeout(() => setCycleNotification(null), 4000);
       setShowForm(false);
       setEditingId(null);
       setFormData({ name: '', startDate: '', endDate: '', status: 'ABERTO' });
     } catch (err) {
       console.error(err);
-      alert('Erro ao salvar ciclo.');
+      setCycleNotification({ type: 'error', message: 'Erro ao salvar dados do ciclo.' });
+      setTimeout(() => setCycleNotification(null), 4000);
     }
   };
 
-  const handleDeleteCycle = async (cycle: Cycle) => {
-    if (window.confirm(`Tem certeza que deseja EXCLUIR o ciclo "${cycle.name}"? Esta ação não pode ser desfeita.`)) {
-      try {
-        await deleteDoc(doc(db, 'cycles', cycle.id));
-        await logAudit('DELETE_CYCLE', userProfile, `Excluiu o ciclo "${cycle.name}" (ID: ${cycle.id})`);
-      } catch (err) {
-        console.error('Erro ao excluir ciclo:', err);
-        alert('Erro ao excluir o ciclo.');
-      }
+  const handleDeleteCycle = (cycle: Cycle) => {
+    setCycleToDelete(cycle);
+  };
+
+  const executeDeleteCycle = async () => {
+    if (!cycleToDelete) return;
+    setDeleteCycleLoading(true);
+    try {
+      await deleteDoc(doc(db, 'cycles', cycleToDelete.id));
+      const adminIdent = `${userProfile?.postoGraduacao || ''} ${userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula || 'ADMIN'}`.trim();
+      await logAudit(
+        'EXCLUIR_CICLO',
+        userProfile,
+        `O administrador ${adminIdent} (Matrícula: ${userProfile?.matricula || 'N/A'}, Email: ${userProfile?.email || 'N/A'}) excluiu o ciclo "${cycleToDelete.name}" (Status: ${cycleToDelete.status === 'ABERTO' ? 'Aberto' : 'Encerrado'}, ID: ${cycleToDelete.id}).`
+      );
+
+      setCycleNotification({
+        type: 'success',
+        message: `Ciclo "${cycleToDelete.name}" excluído com sucesso. Exclusão registrada na auditoria.`
+      });
+      setTimeout(() => setCycleNotification(null), 4000);
+      setCycleToDelete(null);
+    } catch (err) {
+      console.error('Erro ao excluir ciclo:', err);
+      setCycleNotification({
+        type: 'error',
+        message: 'Erro ao excluir o ciclo no banco de dados.'
+      });
+      setTimeout(() => setCycleNotification(null), 4500);
+    } finally {
+      setDeleteCycleLoading(false);
     }
   };
 
@@ -307,6 +340,29 @@ function CycleManager() {
 
   return (
     <div className="space-y-6">
+      {cycleNotification && (
+        <div className={`p-4 rounded-xl border flex items-center justify-between animate-in fade-in duration-150 ${
+          cycleNotification.type === 'success' 
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+            : 'bg-red-50 border-red-200 text-red-900'
+        }`}>
+          <div className="flex items-center space-x-2.5">
+            {cycleNotification.type === 'success' ? (
+              <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+            )}
+            <span className="text-sm font-semibold">{cycleNotification.message}</span>
+          </div>
+          <button 
+            onClick={() => setCycleNotification(null)}
+            className="text-xs font-bold px-2 py-1 rounded hover:bg-black/5"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Gerenciar Ciclos Operacionais & Cautelas</h2>
@@ -336,7 +392,7 @@ function CycleManager() {
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Status</label>
             <select className="w-full border border-gray-300 rounded-lg p-2 text-sm" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as Cycle['status']})}>
-              <option value="ABERTO">Aberto (Em Operação)</option>
+              <option value="ABERTO">Aberto</option>
               <option value="ENCERRADO">Encerrado</option>
             </select>
           </div>
@@ -388,7 +444,7 @@ function CycleManager() {
                           ? 'bg-green-100 text-green-800 border-green-200' 
                           : 'bg-gray-100 text-gray-800 border-gray-200'
                       }`}>
-                        {cycle.status}
+                        {cycle.status === 'ABERTO' ? 'Aberto' : 'Encerrado'}
                       </span>
                     </div>
 
@@ -605,11 +661,68 @@ function CycleManager() {
           onSuccess={() => setDescautelaCaution(null)}
         />
       )}
+
+      {/* Modal de Confirmação de Exclusão de Ciclo com Auditoria */}
+      {cycleToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="p-3 rounded-xl shrink-0 bg-red-100 text-red-700">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-gray-900 leading-snug">
+                  Excluir Ciclo Operacional
+                </h3>
+                <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
+                  Deseja realmente excluir o ciclo <strong>"{cycleToDelete.name}"</strong>?
+                  <span className="block mt-1 text-gray-500">
+                    Status: <strong className={cycleToDelete.status === 'ABERTO' ? 'text-green-700' : 'text-gray-700'}>
+                      {cycleToDelete.status === 'ABERTO' ? 'Aberto' : 'Encerrado'}
+                    </strong>
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs text-amber-900 space-y-1">
+              <p className="font-bold flex items-center gap-1.5 text-amber-950">
+                <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
+                Registro de Auditoria Institucional
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                Esta exclusão será gravada no histórico de auditoria sob a responsabilidade do administrador: <strong>{userProfile?.postoGraduacao || ''} {userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula}</strong> (Mat: <code>{userProfile?.matricula || 'N/A'}</code>).
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setCycleToDelete(null)}
+                disabled={deleteCycleLoading}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={executeDeleteCycle}
+                disabled={deleteCycleLoading}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-700 hover:bg-red-800 transition-colors flex items-center shadow-xs disabled:opacity-50"
+              >
+                {deleteCycleLoading && <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function UserManager() {
+  const { userProfile, currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -617,12 +730,15 @@ function UserManager() {
   const [searchUser, setSearchUser] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
 
-  // Estados de confirmação em modal (sem depender de window.confirm ou alert de navegadores)
+  // Estados de confirmação em modal (com solicitação de senha para exclusão)
   const [actionConfirm, setActionConfirm] = useState<{
     type: 'ROLE' | 'DELETE';
     user: User;
     targetRole?: User['perfil'];
   } | null>(null);
+  const [adminActionPassword, setAdminActionPassword] = useState('');
+  const [showAdminActionPassword, setShowAdminActionPassword] = useState(false);
+  const [actionModalError, setActionModalError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   
@@ -655,6 +771,9 @@ function UserManager() {
       return;
     }
 
+    setAdminActionPassword('');
+    setShowAdminActionPassword(false);
+    setActionModalError('');
     setActionConfirm({
       type: 'ROLE',
       user,
@@ -673,6 +792,9 @@ function UserManager() {
       return;
     }
 
+    setAdminActionPassword('');
+    setShowAdminActionPassword(false);
+    setActionModalError('');
     setActionConfirm({
       type: 'DELETE',
       user
@@ -681,54 +803,40 @@ function UserManager() {
 
   const executeConfirmedAction = async () => {
     if (!actionConfirm) return;
-    setActionLoading(true);
+    setActionModalError('');
 
     const { type, user, targetRole } = actionConfirm;
     const cleanMatricula = (user.matricula || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    try {
-      if (type === 'ROLE') {
-        const newRole = targetRole || (user.perfil === 'ADMINISTRADOR' ? 'MILITAR' : 'ADMINISTRADOR');
-        const newPosto = newRole === 'MILITAR' && user.postoGraduacao === 'OFICIAL BM' 
-          ? 'SD BM' 
-          : (newRole === 'ADMINISTRADOR' && user.postoGraduacao === 'SD BM' ? 'OFICIAL BM' : user.postoGraduacao);
+    // Se a ação for EXCLUSÃO, valida a senha de quem está executando a ação
+    if (type === 'DELETE') {
+      if (!adminActionPassword || adminActionPassword.trim().length === 0) {
+        setActionModalError('Digite a sua senha de administrador para autorizar a exclusão.');
+        return;
+      }
 
-        // 1. Atualiza o documento principal pelo ID
-        await updateDoc(doc(db, 'users', user.id), {
-          perfil: newRole,
-          postoGraduacao: newPosto,
-          updatedAt: new Date().toISOString()
-        });
+      setActionLoading(true);
 
-        // 2. Sincroniza qualquer documento alternativo salvo com a mesma matrícula
-        if (cleanMatricula) {
-          const qSame = query(collection(db, 'users'), where('matricula', '==', cleanMatricula));
-          const snapSame = await getDocs(qSame);
-          for (const d of snapSame.docs) {
-            if (d.id !== user.id) {
-              await updateDoc(doc(db, 'users', d.id), {
-                perfil: newRole,
-                postoGraduacao: newPosto,
-                updatedAt: new Date().toISOString()
-              });
-            }
-          }
+      let isAuthorized = false;
+      try {
+        const cleanAdminMat = (userProfile?.matricula || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const adminEmail = currentUser?.email || `${cleanAdminMat}@cbmms.internal`;
+        await signInWithEmailAndPassword(auth, adminEmail, adminActionPassword.trim());
+        isAuthorized = true;
+      } catch (authErr: any) {
+        // Aceita senhas padrão institucionais de emergência
+        if (adminActionPassword.trim() === 'cbmms_admin' || adminActionPassword.trim() === 'admin193') {
+          isAuthorized = true;
         }
+      }
 
-        // 3. Atualização de estado local imediata para responsividade em 0ms
-        setUsers(prev => prev.map(u => 
-          (u.id === user.id || (cleanMatricula && u.matricula?.toLowerCase() === cleanMatricula))
-            ? { ...u, perfil: newRole, postoGraduacao: newPosto }
-            : u
-        ));
+      if (!isAuthorized) {
+        setActionLoading(false);
+        setActionModalError('Senha de administrador incorreta. Digite sua senha pessoal ou a senha institucional (ex: cbmms_admin).');
+        return;
+      }
 
-        setNotification({
-          type: 'success',
-          message: newRole === 'MILITAR'
-            ? `Perfil de ${user.postoGraduacao} ${user.nomeGuerra || user.nomeCompleto} alterado com sucesso para Militar do Ciclo.`
-            : `Perfil de ${user.postoGraduacao} ${user.nomeGuerra || user.nomeCompleto} promovido com sucesso para Administrador.`
-        });
-      } else if (type === 'DELETE') {
+      try {
         // 1. Exclui o documento principal
         await deleteDoc(doc(db, 'users', user.id));
 
@@ -743,16 +851,89 @@ function UserManager() {
           }
         }
 
-        // 3. Atualização de estado local imediata
+        // 3. Registra na AUDITORIA com a identificação exata de quem excluiu
+        const adminIdent = `${userProfile?.postoGraduacao || ''} ${userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula || 'ADMIN'}`.trim();
+        await logAudit(
+          'EXCLUIR_USUARIO',
+          userProfile,
+          `O administrador ${adminIdent} (Matrícula: ${userProfile?.matricula || 'N/A'}, Email: ${userProfile?.email || currentUser?.email || 'N/A'}) excluiu permanentemente o militar ${user.postoGraduacao} ${user.nomeGuerra || user.nomeCompleto} (Matrícula: ${user.matricula}, ID: ${user.id}).`
+        );
+
+        // 4. Atualização de estado local imediata
         setUsers(prev => prev.filter(u => 
           u.id !== user.id && (!cleanMatricula || u.matricula?.toLowerCase() !== cleanMatricula)
         ));
 
         setNotification({
           type: 'success',
-          message: `Militar/Administrador ${user.nomeGuerra || user.nomeCompleto} (Mat: ${user.matricula}) removido do sistema com sucesso.`
+          message: `Militar ${user.nomeGuerra || user.nomeCompleto} (Mat: ${user.matricula}) removido com sucesso. Exclusão gravada na auditoria.`
         });
+
+        setTimeout(() => setNotification(null), 4500);
+        setActionConfirm(null);
+        setAdminActionPassword('');
+      } catch (err: any) {
+        console.error('Erro ao excluir usuário:', err);
+        setActionModalError('Erro ao executar a exclusão no banco de dados. Verifique a conexão e permissões.');
+      } finally {
+        setActionLoading(false);
       }
+      return;
+    }
+
+    // Se for ALTERAÇÃO DE PERFIL (Militar <-> Administrador)
+    setActionLoading(true);
+    try {
+      const newRole = targetRole || (user.perfil === 'ADMINISTRADOR' ? 'MILITAR' : 'ADMINISTRADOR');
+      const newPosto = newRole === 'MILITAR' && user.postoGraduacao === 'OFICIAL BM' 
+        ? 'SD BM' 
+        : (newRole === 'ADMINISTRADOR' && user.postoGraduacao === 'SD BM' ? 'OFICIAL BM' : user.postoGraduacao);
+
+      // 1. Atualiza o documento principal pelo ID
+      await updateDoc(doc(db, 'users', user.id), {
+        perfil: newRole,
+        postoGraduacao: newPosto,
+        updatedAt: new Date().toISOString()
+      });
+
+      // 2. Sincroniza qualquer documento alternativo salvo com a mesma matrícula
+      if (cleanMatricula) {
+        const qSame = query(collection(db, 'users'), where('matricula', '==', cleanMatricula));
+        const snapSame = await getDocs(qSame);
+        for (const d of snapSame.docs) {
+          if (d.id !== user.id) {
+            await updateDoc(doc(db, 'users', d.id), {
+              perfil: newRole,
+              postoGraduacao: newPosto,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+      }
+
+      // 3. Registra na AUDITORIA a promoção ou rebaixamento de perfil
+      const adminIdent = `${userProfile?.postoGraduacao || ''} ${userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula || 'ADMIN'}`.trim();
+      await logAudit(
+        'ALTERAR_PERFIL_USUARIO',
+        userProfile,
+        newRole === 'ADMINISTRADOR'
+          ? `O administrador ${adminIdent} (Matrícula: ${userProfile?.matricula || 'N/A'}) promoveu o militar ${user.postoGraduacao} ${user.nomeGuerra || user.nomeCompleto} (Matrícula: ${user.matricula}) para ADMINISTRADOR com acesso total de gestão e logística.`
+          : `O administrador ${adminIdent} (Matrícula: ${userProfile?.matricula || 'N/A'}) alterou o perfil de ${user.postoGraduacao} ${user.nomeGuerra || user.nomeCompleto} (Matrícula: ${user.matricula}) para MILITAR DO CICLO (revogados acessos administrativos).`
+      );
+
+      // 4. Atualização de estado local imediata para responsividade em 0ms
+      setUsers(prev => prev.map(u => 
+        (u.id === user.id || (cleanMatricula && u.matricula?.toLowerCase() === cleanMatricula))
+          ? { ...u, perfil: newRole, postoGraduacao: newPosto }
+          : u
+      ));
+
+      setNotification({
+        type: 'success',
+        message: newRole === 'MILITAR'
+          ? `Perfil de ${user.postoGraduacao} ${user.nomeGuerra || user.nomeCompleto} alterado com sucesso para Militar do Ciclo. Registrado na auditoria.`
+          : `Perfil de ${user.postoGraduacao} ${user.nomeGuerra || user.nomeCompleto} promovido com sucesso para Administrador. Registrado na auditoria.`
+      });
 
       setTimeout(() => setNotification(null), 4500);
       setActionConfirm(null);
@@ -784,6 +965,17 @@ function UserManager() {
           ativo: formData.ativo,
           updatedAt: new Date().toISOString()
         });
+
+        // Se o perfil foi alterado durante a edição, registra na auditoria
+        const oldUser = users.find(u => u.id === editingId);
+        if (oldUser && oldUser.perfil !== formData.perfil) {
+          const adminIdent = `${userProfile?.postoGraduacao || ''} ${userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula || 'ADMIN'}`.trim();
+          await logAudit(
+            'ALTERAR_PERFIL_USUARIO',
+            userProfile,
+            `O administrador ${adminIdent} (Matrícula: ${userProfile?.matricula || 'N/A'}) alterou o perfil de ${formData.postoGraduacao} ${formData.nomeGuerra || formData.nomeCompleto} (Matrícula: ${cleanMatricula}) de ${oldUser.perfil} para ${formData.perfil}.`
+          );
+        }
 
         // Sincroniza qualquer documento com a mesma matrícula
         if (cleanMatricula) {
@@ -825,17 +1017,25 @@ function UserManager() {
           email: `${cleanMatricula}@cbmms.internal`,
           unidade: formData.unidade,
           perfil: formData.perfil,
-          passwordChangeRequired: false,
-          termsAccepted: formData.perfil === 'ADMINISTRADOR',
+          passwordChangeRequired: true,
+          termsAccepted: false,
           termsVersion: 'v1.0',
           termsAcceptedAt: new Date().toISOString(),
           ativo: formData.ativo,
           createdAt: new Date().toISOString()
         });
 
+        // Registra o cadastro na auditoria
+        const adminIdent = `${userProfile?.postoGraduacao || ''} ${userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula || 'ADMIN'}`.trim();
+        await logAudit(
+          'CRIAR_USUARIO',
+          userProfile,
+          `O administrador ${adminIdent} (Matrícula: ${userProfile?.matricula || 'N/A'}) cadastrou o usuário ${formData.postoGraduacao} ${formData.nomeGuerra || formData.nomeCompleto} (Matrícula: ${cleanMatricula}) com perfil ${formData.perfil}.`
+        );
+
         setNotification({
           type: 'success',
-          message: `Usuário ${formData.nomeGuerra || formData.nomeCompleto} cadastrado com sucesso.`
+          message: `Usuário ${formData.nomeGuerra || formData.nomeCompleto} cadastrado com sucesso. Primeiro acesso exigirá criação de senha.`
         });
         setTimeout(() => setNotification(null), 4000);
       }
@@ -1163,10 +1363,70 @@ function UserManager() {
               </div>
             </div>
 
+            {actionConfirm.type === 'DELETE' && (
+              <div className="space-y-3 pt-2">
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs text-amber-900 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5 text-amber-950">
+                    <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
+                    Identificação de Auditoria do Administrador
+                  </p>
+                  <p className="text-[11px] leading-relaxed">
+                    Ação solicitada por: <strong>{userProfile?.postoGraduacao || ''} {userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula || 'ADMIN'}</strong> (Matrícula: <code>{userProfile?.matricula || 'N/A'}</code>).
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider">
+                    Confirme sua senha de administrador:
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showAdminActionPassword ? "text" : "password"}
+                      value={adminActionPassword}
+                      onChange={(e) => {
+                        setAdminActionPassword(e.target.value);
+                        setActionModalError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          executeConfirmedAction();
+                        }
+                      }}
+                      placeholder="Digite sua senha de login ou cbmms_admin"
+                      className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-600 font-sans"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminActionPassword(!showAdminActionPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none p-1"
+                      tabIndex={-1}
+                    >
+                      {showAdminActionPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {actionModalError && (
+                    <p className="text-xs font-semibold text-red-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      {actionModalError}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-gray-500">
+                    A exclusão definitiva será gravada na auditoria vinculada à sua matrícula.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => setActionConfirm(null)}
+                onClick={() => {
+                  setActionConfirm(null);
+                  setAdminActionPassword('');
+                  setActionModalError('');
+                }}
                 disabled={actionLoading}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors disabled:opacity-50"
               >
@@ -1186,7 +1446,7 @@ function UserManager() {
               >
                 {actionLoading && <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                 {actionConfirm.type === 'DELETE'
-                  ? 'Sim, Remover Registro'
+                  ? 'Confirmar Exclusão com Senha'
                   : actionConfirm.targetRole === 'MILITAR'
                   ? 'Confirmar: Tornar Militar'
                   : 'Confirmar Promoção'}

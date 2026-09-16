@@ -9,6 +9,9 @@ interface AuditLog {
   action: string;
   userId: string;
   userEmail: string;
+  userName?: string;
+  userMatricula?: string;
+  userPosto?: string;
   details: string;
   timestamp: string;
 }
@@ -67,8 +70,10 @@ export function AdminAuditLogs() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{log.userEmail}</div>
-                    <div className="text-xs text-gray-500">{log.userId}</div>
+                    <div className="text-sm font-bold text-gray-900">
+                      {log.userName ? `${log.userName} (Mat: ${log.userMatricula || 'N/A'})` : log.userEmail}
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono">{log.userEmail}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">

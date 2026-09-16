@@ -41,15 +41,13 @@ export function FirstAccess() {
     e.preventDefault();
     setError('');
 
-    if (userProfile?.passwordChangeRequired) {
-      if (!newPassword || newPassword.length < 6) {
-        setError('A nova senha deve conter no mínimo 6 caracteres.');
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        setError('A confirmação de senha não confere com a nova senha digitada.');
-        return;
-      }
+    if (!newPassword || newPassword.length < 6) {
+      setError('A nova senha pessoal deve conter no mínimo 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('A confirmação de senha não confere com a nova senha digitada.');
+      return;
     }
 
     if (!nomeCompleto.trim() || !nomeGuerra.trim() || !postoGraduacao || !unidade.trim()) {
@@ -65,12 +63,12 @@ export function FirstAccess() {
     setLoading(true);
 
     try {
-      if (currentUser && userProfile?.passwordChangeRequired && newPassword) {
+      if (currentUser && newPassword) {
         await updatePassword(currentUser, newPassword);
       }
       
       if (currentUser) {
-        await updateDoc(doc(db, 'users', currentUser.uid), {
+        const updatePayload = {
           nomeCompleto: nomeCompleto.trim().toUpperCase(),
           nomeGuerra: nomeGuerra.trim().toUpperCase(),
           postoGraduacao,
@@ -81,7 +79,16 @@ export function FirstAccess() {
           termsAccepted: true,
           termsVersion: 'v1.0',
           termsAcceptedAt: serverTimestamp()
-        });
+        };
+
+        await updateDoc(doc(db, 'users', currentUser.uid), updatePayload);
+        if (userProfile?.id && userProfile.id !== currentUser.uid) {
+          try {
+            await updateDoc(doc(db, 'users', userProfile.id), updatePayload);
+          } catch (ignore) {
+            // ignore if secondary doc ID is not found
+          }
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -223,69 +230,67 @@ export function FirstAccess() {
           </div>
 
           {/* NOVA SENHA PESSOAL */}
-          {userProfile?.passwordChangeRequired && (
-            <div className="space-y-4 pt-2">
-              <h2 className="font-bold text-gray-900 border-b pb-2 text-sm uppercase tracking-wider">
-                3. Cadastrar Nova Senha Pessoal
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Nova Senha
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      className="w-full px-3.5 py-2.5 pr-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    Confirmar Nova Senha
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      className="w-full px-3.5 py-2.5 pr-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repita a nova senha"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+          <div className="space-y-4 pt-2">
+            <h2 className="font-bold text-gray-900 border-b pb-2 text-sm uppercase tracking-wider">
+              3. Cadastrar Nova Senha Pessoal
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Nova Senha Pessoal
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    className="w-full px-3.5 py-2.5 pr-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
-              <p className="text-[11px] text-gray-500">
-                Esta nova senha substituirá a senha padrão {perfil === 'ADMINISTRADOR' ? 'institucional' : '(militar193)'} e será usada para seus próximos acessos e assinaturas digitais.
-              </p>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Confirmar Nova Senha
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    className="w-full px-3.5 py-2.5 pr-10 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repita a nova senha"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
+            <p className="text-[11px] text-gray-500">
+              Esta nova senha pessoal substituirá a senha padrão (militar193 / cbmms_admin) e será necessária para seus próximos acessos e para validar suas assinaturas digitais de cautela.
+            </p>
+          </div>
 
           {/* TERMO DE RESPONSABILIDADE */}
           <div className="space-y-3 pt-2">
             <h2 className="font-bold text-gray-900 border-b pb-2 text-sm uppercase tracking-wider">
-              {userProfile?.passwordChangeRequired ? '4.' : '3.'} Termo de Responsabilidade
+              4. Termo de Responsabilidade
             </h2>
             <div className="bg-gray-50 p-3.5 rounded-xl text-xs text-gray-700 h-28 overflow-y-auto border border-gray-200 font-sans space-y-1.5">
               <p className="font-bold text-gray-900">TERMO DE RESPONSABILIDADE OPERACIONAL - CBMMS</p>
@@ -313,7 +318,7 @@ export function FirstAccess() {
           <div className="pt-2">
             <button
               type="submit"
-              disabled={loading || !termsAccepted || (userProfile?.passwordChangeRequired && (!newPassword || !confirmPassword))}
+              disabled={loading || !termsAccepted || !newPassword || !confirmPassword || newPassword.length < 6}
               className="w-full bg-red-800 text-white font-bold py-3 px-4 rounded-xl hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 transition-colors shadow-md text-sm flex items-center justify-center space-x-2"
             >
               {loading ? (
