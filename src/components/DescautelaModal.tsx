@@ -57,6 +57,16 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
   const [militaryOwner, setMilitaryOwner] = useState<User | null>(null);
 
   useEffect(() => {
+    const mapWithdrawalToReturnCondition = (wCond: string) => {
+      if (!wCond) return 'SEM_ALTERACAO';
+      const c = wCond.toLowerCase();
+      if (c.includes('avaria')) return 'AVARIADO';
+      if (c.includes('falta') || c.includes('extraviad')) return 'FALTANTE';
+      if (c.includes('consumid')) return 'CONSUMIDO';
+      if (c.includes('alter')) return 'COM_ALTERACAO';
+      return 'SEM_ALTERACAO';
+    };
+
     const fetchItems = async () => {
       try {
         setLoadingItems(true);
@@ -69,8 +79,8 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
         loaded.forEach(it => {
           initialReturnMap[it.id] = {
             quantityReturned: it.quantityReturned !== undefined ? it.quantityReturned : it.quantity,
-            conditionReturn: it.conditionReturn || 'SEM_ALTERACAO',
-            observationReturn: it.observationReturn || ''
+            conditionReturn: it.conditionReturn || mapWithdrawalToReturnCondition(it.conditionWithdrawal),
+            observationReturn: it.observationReturn || it.observationWithdrawal || ''
           };
         });
         setReturnItemsData(initialReturnMap);
@@ -127,8 +137,8 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
       // 1. Verify electronic signature password
       let authenticated = false;
       const cleanMatricula = (userProfile.matricula || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      const internalEmail = auth.currentUser?.email || `${cleanMatricula}@cbmms.internal`;
-      const VALID_ADMIN_PASSWORDS = ['admin193', 'cbmms_admin', 'cbmms193', 'admin123456', userProfile.matricula];
+      const internalEmail = auth.currentUser?.email || `${cleanMatricula}@dpa.internal`;
+      const VALID_ADMIN_PASSWORDS = ['admin193', 'dpa_admin', 'dpa193', 'admin123456', userProfile.matricula];
 
       if (userProfile.perfil === 'ADMINISTRADOR' && VALID_ADMIN_PASSWORDS.includes(password)) {
         authenticated = true;
@@ -393,7 +403,7 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Ciclo / GCIF:</span>
+                  <span className="text-gray-500 block">Ciclo / TIF:</span>
                   <span className="font-bold text-gray-900">{caution.unitGcif || 'Não informado'}</span>
                 </div>
                 <div>

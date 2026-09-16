@@ -41,7 +41,7 @@ export function Dashboard({ children }: { children?: React.ReactNode }) {
             <div className="flex items-center">
               <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
                 <Flame className="h-8 w-8 mr-2" />
-                <span className="font-bold text-lg hidden sm:block">Cautelas CBMMS</span>
+                <span className="font-bold text-lg hidden sm:block">Cautelas DPA</span>
                 <span className="font-bold text-lg sm:hidden">CBMMS</span>
               </Link>
             </div>

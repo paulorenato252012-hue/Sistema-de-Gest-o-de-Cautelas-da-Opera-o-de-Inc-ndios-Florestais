@@ -38,7 +38,7 @@ export const generateCautionPDF = (
   }
   doc.text(`Status Atual: ${caution.status.replace(/_/g, ' ')}`, 14, caution.returnedAt ? 54 : 49);
 
-  doc.text(`Ciclo / GCIF: ${caution.unitGcif || 'Não informado'}`, 110, 39);
+  doc.text(`Ciclo / TIF: ${caution.unitGcif || 'Não informado'}`, 110, 39);
   doc.text(`Base Operacional: ${caution.base || 'Não especificada'}`, 110, 44);
   if (caution.vehiclePrefixo || caution.vehiclePlaca) {
     const vtrText = `Viatura: ${caution.vehiclePrefixo || '-'} | Placa: ${caution.vehiclePlaca || '-'}`;
@@ -143,7 +143,7 @@ export const generateCautionPDF = (
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      `Cautelas CBMMS - Documento Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')} - Página ${i} de ${pageCount}`, 
+      `Cautelas DPA - Documento Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')} - Página ${i} de ${pageCount}`, 
       105, 290, 
       { align: 'center' }
     );
@@ -177,7 +177,7 @@ export const generateDescautelaPDF = (
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(100, 100, 100);
-  doc.text('HOMOLOGAÇÃO OFICIAL DE DEVOLUÇÃO - LOGÍSTICA / GCIF', 105, 31, { align: 'center' });
+  doc.text('HOMOLOGAÇÃO OFICIAL DE DEVOLUÇÃO - LOGÍSTICA / TIF', 105, 31, { align: 'center' });
 
   doc.setLineWidth(0.5);
   doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -193,7 +193,7 @@ export const generateDescautelaPDF = (
   doc.text(`Data de Descautela (Devolução): ${caution.returnedAt ? format(new Date(caution.returnedAt), 'dd/MM/yyyy HH:mm') : format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 51);
   doc.text(`Status Oficial: DESCAUTELADA (BAIXA HOMOLOGADA)`, 14, 56);
 
-  doc.text(`Ciclo / GCIF: ${caution.unitGcif || 'Não informado'}`, 110, 41);
+  doc.text(`Ciclo / TIF: ${caution.unitGcif || 'Não informado'}`, 110, 41);
   doc.text(`Base Operacional: ${caution.base || 'Não especificada'}`, 110, 46);
   if (caution.vehiclePrefixo || caution.vehiclePlaca) {
     const vtrText = `Viatura: ${caution.vehiclePrefixo || '-'} | Placa: ${caution.vehiclePlaca || '-'}`;
@@ -217,7 +217,7 @@ export const generateDescautelaPDF = (
   } else if (caution.receiverMilitaryName) {
     doc.text(`Administrador Recebedor (Logística): ${caution.receiverMilitaryName} (Mat: ${caution.receiverMilitaryMatricula || '-'})`, 14, milY + 5);
   } else {
-    doc.text(`Administrador Recebedor: Equipe de Logística / GCIF`, 14, milY + 5);
+    doc.text(`Administrador Recebedor: Equipe de Logística / TIF`, 14, milY + 5);
   }
 
   // --- ITEMS CONFERRENCE TABLE ---

@@ -272,7 +272,7 @@ export function CautionView() {
             </h2>
             {caution && (
               <p className="text-xs text-gray-500 mt-0.5">
-                Ciclo / GCIF: <strong>{caution.unitGcif || 'Não informado'}</strong> • Base: <strong>{caution.base || 'Não informada'}</strong>
+                Ciclo / TIF: <strong>{caution.unitGcif || 'Não informado'}</strong> • Base: <strong>{caution.base || 'Não informada'}</strong>
               </p>
             )}
           </div>

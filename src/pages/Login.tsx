@@ -20,7 +20,7 @@ export function Login() {
   // Senha padrão institucional exibida exclusivamente para Militares do Ciclo
   const SENHA_PADRAO_MILITAR = 'militar193';
   // Senha padrão institucional obrigatória para primeiro acesso de Administradores
-  const SENHA_PADRAO_ADMIN = 'cbmms_admin';
+  const SENHA_PADRAO_ADMIN = 'dpa_admin';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +41,7 @@ export function Login() {
     setLoading(true);
 
     try {
-      const internalEmail = `${cleanMatricula}@cbmms.internal`;
+      const internalEmail = `${cleanMatricula}@dpa.internal`;
       
       // 1. Tentar login direto no Firebase Auth
       try {
@@ -87,13 +87,13 @@ export function Login() {
           authErr.code === 'auth/user-not-found' || 
           authErr.code === 'auth/wrong-password'
         ) {
-          const isDefaultMilitarPass = senha === SENHA_PADRAO_MILITAR || senha === 'cbmms193';
+          const isDefaultMilitarPass = senha === SENHA_PADRAO_MILITAR || senha === 'dpa193';
 
           // Validações de primeiro acesso
           if (perfilAcesso === 'ADMINISTRADOR') {
-            // O primeiro acesso para novos administradores deve ser realizado SOMENTE com a senha padrão cbmms_admin
+            // O primeiro acesso para novos administradores deve ser realizado SOMENTE com a senha padrão dpa_admin
             if (senha !== SENHA_PADRAO_ADMIN) {
-              setError('O primeiro acesso para novos administradores deve ser realizado somente com a senha padrão: cbmms_admin');
+              setError('O primeiro acesso para novos administradores deve ser realizado somente com a senha padrão: dpa_admin');
               return;
             }
           } else {
@@ -139,9 +139,9 @@ export function Login() {
               nomeGuerra: existingData?.nomeGuerra || (isPrincipalAdmin 
                 ? 'ADMIN PRINCIPAL' 
                 : cleanMatricula.toUpperCase()),
-              postoGraduacao: existingData?.postoGraduacao || (isRoleAdmin ? 'OFICIAL BM' : 'SD BM'),
+              postoGraduacao: existingData?.postoGraduacao || (isRoleAdmin ? '1º TEN BM' : 'SD BM'),
               perfil: finalPerfil,
-              unidade: existingData?.unidade || (isRoleAdmin ? 'LOGÍSTICA / GCIF' : 'QCG'),
+              unidade: existingData?.unidade || (isRoleAdmin ? 'DPA' : 'QCG'),
               ativo: true,
               passwordChangeRequired: true, // Redireciona para personalizar dados e senha
               termsAccepted: false,
@@ -187,9 +187,9 @@ export function Login() {
           <div className="p-3 bg-red-100 rounded-2xl mb-2 shadow-2xs">
             <Flame size={38} className="text-red-800" />
           </div>
-          <h1 className="text-2xl font-black text-center text-gray-900 tracking-tight">Cautelas CBMMS</h1>
+          <h1 className="text-2xl font-black text-center text-gray-900 tracking-tight">Cautelas DPA</h1>
           <p className="text-xs text-gray-500 text-center mt-0.5">
-            Corpo de Bombeiros Militar de Mato Grosso do Sul • GCIF
+            Corpo de Bombeiros Militar de Mato Grosso do Sul • TIF
           </p>
         </div>
 

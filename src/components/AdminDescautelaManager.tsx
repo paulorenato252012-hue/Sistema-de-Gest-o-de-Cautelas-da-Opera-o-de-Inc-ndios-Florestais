@@ -443,6 +443,16 @@ function AdminDescautelaExecutionModal({
   const [finishedSignatures, setFinishedSignatures] = useState<Signature[]>([]);
 
   useEffect(() => {
+    const mapWithdrawalToReturnCondition = (wCond: string) => {
+      if (!wCond) return 'SEM_ALTERACAO';
+      const c = wCond.toLowerCase();
+      if (c.includes('avaria')) return 'AVARIADO';
+      if (c.includes('falta') || c.includes('extraviad')) return 'FALTANTE';
+      if (c.includes('consumid')) return 'CONSUMIDO';
+      if (c.includes('alter')) return 'COM_ALTERACAO';
+      return 'SEM_ALTERACAO';
+    };
+
     const loadItems = async () => {
       try {
         setLoadingItems(true);
@@ -454,8 +464,8 @@ function AdminDescautelaExecutionModal({
         loaded.forEach(it => {
           initialMap[it.id] = {
             quantityReturned: it.quantityReturned !== undefined ? it.quantityReturned : it.quantity,
-            conditionReturn: it.conditionReturn || 'SEM_ALTERACAO',
-            observationReturn: it.observationReturn || ''
+            conditionReturn: it.conditionReturn || mapWithdrawalToReturnCondition(it.conditionWithdrawal),
+            observationReturn: it.observationReturn || it.observationWithdrawal || ''
           };
         });
         setReturnItemsData(initialMap);
@@ -499,8 +509,8 @@ function AdminDescautelaExecutionModal({
       // 1. Authenticate administrator
       let authenticated = false;
       const cleanMatricula = (userProfile.matricula || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      const internalEmail = auth.currentUser?.email || `${cleanMatricula}@cbmms.internal`;
-      const VALID_ADMIN_PASSWORDS = ['admin193', 'cbmms_admin', 'cbmms193', 'admin123456', userProfile.matricula];
+      const internalEmail = auth.currentUser?.email || `${cleanMatricula}@dpa.internal`;
+      const VALID_ADMIN_PASSWORDS = ['admin193', 'dpa_admin', 'dpa193', 'admin123456', userProfile.matricula];
 
       if (userProfile.perfil === 'ADMINISTRADOR' && VALID_ADMIN_PASSWORDS.includes(password)) {
         authenticated = true;

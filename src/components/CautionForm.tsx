@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Save, Plus, Trash2, PackagePlus, CheckCircle2, AlertCircle, Sparkles, Wrench, RefreshCw, Camera, X, Eye } from 'lucide-react';
 import { uploadAvariaImage } from '../lib/storage';
 
-// Relação completa de materiais padronizados de combate a incêndios florestais (CBMMS / GCIF)
+// Relação completa de materiais padronizados de combate a incêndios florestais (CBMMS / TIF)
 export const DEFAULT_MATERIAIS_PADRONIZADOS = [
   'Soprador Costal STIHL (BR 420 / BR 600)',
   'Soprador Costal GUARANY',

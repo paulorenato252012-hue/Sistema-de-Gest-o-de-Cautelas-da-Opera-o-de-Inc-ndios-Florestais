@@ -371,7 +371,7 @@ export function MilitarPanel() {
           {/* Seletor de Ciclo Informado */}
           <div className="flex items-center space-x-2 text-xs">
             <Filter className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-gray-500 font-medium">Ciclo / GCIF:</span>
+            <span className="text-gray-500 font-medium">Ciclo / TIF:</span>
             <select
               className="px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg font-semibold text-gray-800 focus:ring-red-500 focus:border-red-500"
               value={selectedCycle}
@@ -600,7 +600,7 @@ export function MilitarPanel() {
                             {getStatusBadge(caution.status)}
                           </div>
                           <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                            {caution.unitGcif && <span><strong>Ciclo / GCIF:</strong> {caution.unitGcif}</span>}
+                            {caution.unitGcif && <span><strong>Ciclo / TIF:</strong> {caution.unitGcif}</span>}
                             {caution.base && <span><strong>Base:</strong> {caution.base}</span>}
                             {caution.vehiclePrefixo && <span><strong>Vtr:</strong> {caution.vehiclePrefixo}</span>}
                             <span><strong>Data:</strong> {caution.createdAt ? new Date(caution.createdAt).toLocaleDateString('pt-BR') : '-'}</span>
@@ -710,7 +710,7 @@ export function MilitarPanel() {
                               {getStatusBadge(caution.status)}
                             </div>
                             <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                              {caution.unitGcif && <span><strong>Ciclo / GCIF:</strong> {caution.unitGcif}</span>}
+                              {caution.unitGcif && <span><strong>Ciclo / TIF:</strong> {caution.unitGcif}</span>}
                               {caution.base && <span><strong>Base:</strong> {caution.base}</span>}
                               {caution.vehiclePrefixo && <span><strong>Vtr:</strong> {caution.vehiclePrefixo}</span>}
                               {caution.returnRequestedAt && (
@@ -800,7 +800,7 @@ export function MilitarPanel() {
                               {getStatusBadge(caution.status)}
                             </div>
                             <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                              {caution.unitGcif && <span><strong>Ciclo / GCIF:</strong> {caution.unitGcif}</span>}
+                              {caution.unitGcif && <span><strong>Ciclo / TIF:</strong> {caution.unitGcif}</span>}
                               {caution.receiverMilitaryName && (
                                 <span><strong>Descautelado por (Admin):</strong> {caution.receiverMilitaryName}</span>
                               )}

@@ -57,7 +57,7 @@ export function AdminPanel() {
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Painel Administrativo</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Gestão Operacional, Descautelas a Pedido, Ciclos, Efetivo e Viaturas • GCIF
+            Gestão Operacional, Descautelas a Pedido, Ciclos, Efetivo e Viaturas • TIF
           </p>
         </div>
       </div>
@@ -755,7 +755,7 @@ function UserManager() {
   }, []);
 
   const handleCopyAdminKey = () => {
-    navigator.clipboard.writeText('cbmms_admin');
+    navigator.clipboard.writeText('dpa_admin');
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2000);
   };
@@ -820,19 +820,19 @@ function UserManager() {
       let isAuthorized = false;
       try {
         const cleanAdminMat = (userProfile?.matricula || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        const adminEmail = currentUser?.email || `${cleanAdminMat}@cbmms.internal`;
+        const adminEmail = currentUser?.email || `${cleanAdminMat}@dpa.internal`;
         await signInWithEmailAndPassword(auth, adminEmail, adminActionPassword.trim());
         isAuthorized = true;
       } catch (authErr: any) {
         // Aceita senhas padrão institucionais de emergência
-        if (adminActionPassword.trim() === 'cbmms_admin' || adminActionPassword.trim() === 'admin193') {
+        if (adminActionPassword.trim() === 'dpa_admin' || adminActionPassword.trim() === 'admin193') {
           isAuthorized = true;
         }
       }
 
       if (!isAuthorized) {
         setActionLoading(false);
-        setActionModalError('Senha de administrador incorreta. Digite sua senha pessoal ou a senha institucional (ex: cbmms_admin).');
+        setActionModalError('Senha de administrador incorreta. Digite sua senha pessoal ou a senha institucional (ex: dpa_admin).');
         return;
       }
 
@@ -885,9 +885,9 @@ function UserManager() {
     setActionLoading(true);
     try {
       const newRole = targetRole || (user.perfil === 'ADMINISTRADOR' ? 'MILITAR' : 'ADMINISTRADOR');
-      const newPosto = newRole === 'MILITAR' && user.postoGraduacao === 'OFICIAL BM' 
+      const newPosto = newRole === 'MILITAR' && user.postoGraduacao === '1º TEN BM' 
         ? 'SD BM' 
-        : (newRole === 'ADMINISTRADOR' && user.postoGraduacao === 'SD BM' ? 'OFICIAL BM' : user.postoGraduacao);
+        : (newRole === 'ADMINISTRADOR' && user.postoGraduacao === 'SD BM' ? '1º TEN BM' : user.postoGraduacao);
 
       // 1. Atualiza o documento principal pelo ID
       await updateDoc(doc(db, 'users', user.id), {
@@ -1014,7 +1014,7 @@ function UserManager() {
           nomeCompleto: formData.nomeCompleto,
           nomeGuerra: formData.nomeGuerra,
           postoGraduacao: formData.postoGraduacao,
-          email: `${cleanMatricula}@cbmms.internal`,
+          email: `${cleanMatricula}@dpa.internal`,
           unidade: formData.unidade,
           perfil: formData.perfil,
           passwordChangeRequired: true,
@@ -1116,17 +1116,17 @@ function UserManager() {
           <div className="space-y-1">
             <h3 className="font-bold text-base flex items-center">
               <ShieldCheck className="w-5 h-5 mr-2 text-green-400" />
-              Gestão de Administradores do Sistema ({adminCount} ativos)
+              Gestão de Administradores do Sistema ({adminCount} {adminCount === 1 ? 'cadastrado' : 'cadastrados'})
             </h3>
             <p className="text-xs text-red-200 max-w-2xl leading-relaxed">
-              O sistema permite múltiplos administradores. O primeiro acesso para novos administradores é realizado exclusivamente com a senha padrão <strong className="font-mono text-white bg-red-950/60 px-1 py-0.5 rounded">cbmms_admin</strong>. Administradores também podem remover usuários ou promover novos administradores abaixo.
+              O sistema permite múltiplos administradores. O primeiro acesso para novos administradores é realizado exclusivamente com a senha padrão <strong className="font-mono text-white bg-red-950/60 px-1 py-0.5 rounded">dpa_admin</strong>. Administradores também podem remover usuários ou promover novos administradores abaixo.
             </p>
           </div>
 
           <div className="bg-red-950/80 border border-red-700/80 rounded-xl p-3 flex items-center gap-3 shrink-0">
             <div>
               <span className="text-[10px] text-red-300 font-bold uppercase tracking-wider block">Senha Padrão de 1º Acesso</span>
-              <span className="font-mono text-sm font-bold text-white">cbmms_admin</span>
+              <span className="font-mono text-sm font-bold text-white">dpa_admin</span>
             </div>
             <button
               onClick={handleCopyAdminKey}
@@ -1208,12 +1208,57 @@ function UserManager() {
 
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Posto/Graduação *</label>
-            <input required type="text" className="w-full border border-gray-300 rounded-lg p-2 text-sm" value={formData.postoGraduacao} onChange={e => setFormData({...formData, postoGraduacao: e.target.value})} placeholder="Ex: CAP BM, TEN BM, SGT BM" />
+            <select required className="w-full border border-gray-300 rounded-lg p-2 text-sm bg-white" value={formData.postoGraduacao} onChange={e => setFormData({...formData, postoGraduacao: e.target.value})}>
+              <option value="CEL BM">CEL BM</option>
+              <option value="TC BM">TC BM</option>
+              <option value="MAJ BM">MAJ BM</option>
+              <option value="CAP BM">CAP BM</option>
+              <option value="1º TEN BM">1º TEN BM</option>
+              <option value="2º TEN BM">2º TEN BM</option>
+              <option value="SUBTEN BM">SUBTEN BM</option>
+              <option value="1º SGT BM">1º SGT BM</option>
+              <option value="2º SGT BM">2º SGT BM</option>
+              <option value="3º SGT BM">3º SGT BM</option>
+              <option value="CB BM">CB BM</option>
+              <option value="SD BM">SD BM</option>
+            </select>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Unidade / Lotação</label>
-            <input required type="text" className="w-full border border-gray-300 rounded-lg p-2 text-sm" value={formData.unidade} onChange={e => setFormData({...formData, unidade: e.target.value})} placeholder="Ex: 1º SGBM, GCIF" />
+            <input list="unidades-list" required type="text" className="w-full border border-gray-300 rounded-lg p-2 text-sm uppercase" value={formData.unidade} onChange={e => setFormData({...formData, unidade: e.target.value.toUpperCase()})} placeholder="Ex: AQUIDAUANA, DPA..." />
+            <datalist id="unidades-list">
+              <option value="QCG" />
+              <option value="DPA" />
+              <option value="ABM" />
+              <option value="AMAMBAI" />
+              <option value="APARECIDA DO TABOADO" />
+              <option value="AQUIDAUANA" />
+              <option value="BATAGUASSU" />
+              <option value="BELA VISTA" />
+              <option value="BONITO" />
+              <option value="CAARAPÓ" />
+              <option value="CAMPO GRANDE" />
+              <option value="CHAPADÃO DO SUL" />
+              <option value="CORUMBÁ" />
+              <option value="COSTA RICA" />
+              <option value="COXIM" />
+              <option value="DOURADOS" />
+              <option value="FÁTIMA DO SUL" />
+              <option value="IVINHEMA" />
+              <option value="JARDIM" />
+              <option value="MARACAJU" />
+              <option value="MIRANDA" />
+              <option value="MUNDO NOVO" />
+              <option value="NAVIRAÍ" />
+              <option value="NOVA ANDRADINA" />
+              <option value="PARANAÍBA" />
+              <option value="PONTA PORÃ" />
+              <option value="RIBAS DO RIO PARDO" />
+              <option value="SÃO GABRIEL DO OESTE" />
+              <option value="SIDROLÂNDIA" />
+              <option value="TRÊS LAGOAS" />
+            </datalist>
           </div>
 
           <div>
@@ -1393,7 +1438,7 @@ function UserManager() {
                           executeConfirmedAction();
                         }
                       }}
-                      placeholder="Digite sua senha de login ou cbmms_admin"
+                      placeholder="Digite sua senha de login ou dpa_admin"
                       className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-600 font-sans"
                       autoFocus
                     />

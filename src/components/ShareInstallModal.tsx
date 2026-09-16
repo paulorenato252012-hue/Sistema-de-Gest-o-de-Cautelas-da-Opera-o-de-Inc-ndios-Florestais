@@ -68,13 +68,13 @@ export function ShareInstallModal({ isOpen, onClose }: ShareInstallModalProps) {
   };
 
   const handleNativeShare = async () => {
-    const textToShare = `Acesse o Sistema de Cautelas CBMMS: ${shareUrl}`;
+    const textToShare = `Acesse o Sistema de Cautelas DPA: ${shareUrl}`;
     
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Cautelas CBMMS',
-          text: 'Sistema de Cautelas CBMMS - Operação Florestal',
+          title: 'Cautelas DPA',
+          text: 'Sistema de Cautelas DPA - Operação Florestal',
           url: shareUrl,
         });
         return;
@@ -106,7 +106,7 @@ export function ShareInstallModal({ isOpen, onClose }: ShareInstallModalProps) {
             </div>
             <div>
               <h3 className="text-base font-black tracking-tight">Compartilhar e Instalar App</h3>
-              <p className="text-xs text-red-100 mt-0.5">Cautelas CBMMS • Operação Florestal</p>
+              <p className="text-xs text-red-100 mt-0.5">Cautelas DPA • Operação Florestal</p>
             </div>
           </div>
           <button
@@ -315,7 +315,7 @@ export function ShareInstallModal({ isOpen, onClose }: ShareInstallModalProps) {
                 <ol className="list-decimal list-inside space-y-1.5">
                   <li>No <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong>, abra a URL do sistema.</li>
                   <li>Clique no ícone de <strong>instalação (+)</strong> localizado no canto direito da barra de endereços.</li>
-                  <li>Ou abra o menu (⋮) e clique em <strong>"Instalar Cautelas CBMMS..."</strong>.</li>
+                  <li>Ou abra o menu (⋮) e clique em <strong>"Instalar Cautelas DPA..."</strong>.</li>
                   <li>O sistema abrirá em janela própria e você terá atalho direto na área de trabalho.</li>
                 </ol>
               )}

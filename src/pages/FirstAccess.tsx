@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ShieldCheck, UserCheck, Wrench, Shield, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export function FirstAccess() {
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, signOut } = useAuth();
   
   // Profile fields
   const [perfil, setPerfil] = useState<'MILITAR' | 'ADMINISTRADOR'>('MILITAR');
@@ -15,6 +15,7 @@ export function FirstAccess() {
   const [nomeGuerra, setNomeGuerra] = useState('');
   const [postoGraduacao, setPostoGraduacao] = useState('SD BM');
   const [unidade, setUnidade] = useState('');
+  const [customUnidade, setCustomUnidade] = useState('');
   
   // Password fields
   const [newPassword, setNewPassword] = useState('');
@@ -29,11 +30,19 @@ export function FirstAccess() {
     if (userProfile) {
       const isAdm = userProfile.perfil === 'ADMINISTRADOR';
       setPerfil(isAdm ? 'ADMINISTRADOR' : 'MILITAR');
-      setIsLogistica(userProfile.unidade?.toUpperCase().includes('LOGÍSTICA') || isAdm);
+      setIsLogistica(userProfile.unidade?.toUpperCase().includes('LOGÍSTICA') || userProfile.unidade?.toUpperCase().includes('DPA') || isAdm);
       setNomeCompleto(userProfile.nomeCompleto?.startsWith('Militar ') || userProfile.nomeCompleto?.startsWith('Administrador ') ? '' : userProfile.nomeCompleto);
       setNomeGuerra(userProfile.nomeGuerra?.startsWith('MILITAR ') ? '' : userProfile.nomeGuerra);
-      setPostoGraduacao(userProfile.postoGraduacao || (isAdm ? 'OFICIAL BM' : 'SD BM'));
-      setUnidade(userProfile.unidade || (isAdm ? 'LOGÍSTICA / GCIF' : ''));
+      setPostoGraduacao(userProfile.postoGraduacao || (isAdm ? '1º TEN BM' : 'SD BM'));
+      const existingUnidade = userProfile.unidade || (isAdm ? 'DPA' : '');
+      const validOptions = ['QCG', 'DPA', 'ABM', 'AMAMBAI', 'APARECIDA DO TABOADO', 'AQUIDAUANA', 'BATAGUASSU', 'BELA VISTA', 'BONITO', 'CAARAPÓ', 'CAMPO GRANDE', 'CHAPADÃO DO SUL', 'CORUMBÁ', 'COSTA RICA', 'COXIM', 'DOURADOS', 'FÁTIMA DO SUL', 'IVINHEMA', 'JARDIM', 'MARACAJU', 'MIRANDA', 'MUNDO NOVO', 'NAVIRAÍ', 'NOVA ANDRADINA', 'PARANAÍBA', 'PONTA PORÃ', 'RIBAS DO RIO PARDO', 'SÃO GABRIEL DO OESTE', 'SIDROLÂNDIA', 'TRÊS LAGOAS'];
+      
+      if (existingUnidade && !validOptions.includes(existingUnidade)) {
+        setUnidade('OUTRA');
+        setCustomUnidade(existingUnidade);
+      } else {
+        setUnidade(existingUnidade);
+      }
     }
   }, [userProfile]);
 
@@ -50,7 +59,9 @@ export function FirstAccess() {
       return;
     }
 
-    if (!nomeCompleto.trim() || !nomeGuerra.trim() || !postoGraduacao || !unidade.trim()) {
+    const finalUnidade = unidade === 'OUTRA' ? customUnidade.trim().toUpperCase() : unidade.trim().toUpperCase();
+
+    if (!nomeCompleto.trim() || !nomeGuerra.trim() || !postoGraduacao || !finalUnidade) {
       setError('Por favor, preencha todos os dados de identificação funcional.');
       return;
     }
@@ -72,7 +83,7 @@ export function FirstAccess() {
           nomeCompleto: nomeCompleto.trim().toUpperCase(),
           nomeGuerra: nomeGuerra.trim().toUpperCase(),
           postoGraduacao,
-          unidade: unidade.trim().toUpperCase(),
+          unidade: finalUnidade,
           perfil,
           ativo: true,
           passwordChangeRequired: false,
@@ -93,7 +104,7 @@ export function FirstAccess() {
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/requires-recent-login') {
-        setError('Sua sessão expirou para troca de senha. Saia e entre novamente com sua senha.');
+        setError('Sua sessão expirou por segurança. Clique no botão "Sair / Cancelar" abaixo e faça o login novamente.');
       } else {
         setError('Erro ao salvar os dados. ' + (err.message || 'Tente novamente.'));
       }
@@ -202,15 +213,92 @@ export function FirstAccess() {
                 </label>
                 <select
                   required
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm bg-white"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 uppercase text-sm bg-white"
                   value={postoGraduacao}
                   onChange={(e) => setPostoGraduacao(e.target.value)}
                 >
-                  <option value="" disabled>Selecione...</option>
-                  {postosGraduacoes.map(pg => (
-                    <option key={pg} value={pg}>{pg}</option>
-                  ))}
+                  <option value="CEL BM">CEL BM</option>
+                  <option value="TC BM">TC BM</option>
+                  <option value="MAJ BM">MAJ BM</option>
+                  <option value="CAP BM">CAP BM</option>
+                  <option value="1º TEN BM">1º TEN BM</option>
+                  <option value="2º TEN BM">2º TEN BM</option>
+                  <option value="SUBTEN BM">SUBTEN BM</option>
+                  <option value="1º SGT BM">1º SGT BM</option>
+                  <option value="2º SGT BM">2º SGT BM</option>
+                  <option value="3º SGT BM">3º SGT BM</option>
+                  <option value="CB BM">CB BM</option>
+                  <option value="SD BM">SD BM</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Unidade / Lotação
+                </label>
+                <select
+                  required
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 uppercase text-sm bg-white"
+                  value={unidade}
+                  onChange={(e) => setUnidade(e.target.value.toUpperCase())}
+                >
+                  <option value="" disabled>SELECIONE SUA UNIDADE...</option>
+                  <option value="QCG">QCG - QUARTEL DO COMANDO GERAL</option>
+                  <option value="DPA">DPA - DIRETORIA DE PATRIMÔNIO E ALMOXARIFADO</option>
+                  <option value="ABM">ABM - ACADEMIA DE BOMBEIROS MILITAR</option>
+                  <option value="AMAMBAI">AMAMBAI</option>
+                  <option value="APARECIDA DO TABOADO">APARECIDA DO TABOADO</option>
+                  <option value="AQUIDAUANA">AQUIDAUANA</option>
+                  <option value="BATAGUASSU">BATAGUASSU</option>
+                  <option value="BELA VISTA">BELA VISTA</option>
+                  <option value="BONITO">BONITO</option>
+                  <option value="CAARAPÓ">CAARAPÓ</option>
+                  <option value="CAMPO GRANDE">CAMPO GRANDE</option>
+                  <option value="CHAPADÃO DO SUL">CHAPADÃO DO SUL</option>
+                  <option value="CORUMBÁ">CORUMBÁ</option>
+                  <option value="COSTA RICA">COSTA RICA</option>
+                  <option value="COXIM">COXIM</option>
+                  <option value="DOURADOS">DOURADOS</option>
+                  <option value="FÁTIMA DO SUL">FÁTIMA DO SUL</option>
+                  <option value="IVINHEMA">IVINHEMA</option>
+                  <option value="JARDIM">JARDIM</option>
+                  <option value="MARACAJU">MARACAJU</option>
+                  <option value="MIRANDA">MIRANDA</option>
+                  <option value="MUNDO NOVO">MUNDO NOVO</option>
+                  <option value="NAVIRAÍ">NAVIRAÍ</option>
+                  <option value="NOVA ANDRADINA">NOVA ANDRADINA</option>
+                  <option value="PARANAÍBA">PARANAÍBA</option>
+                  <option value="PONTA PORÃ">PONTA PORÃ</option>
+                  <option value="RIBAS DO RIO PARDO">RIBAS DO RIO PARDO</option>
+                  <option value="SÃO GABRIEL DO OESTE">SÃO GABRIEL DO OESTE</option>
+                  <option value="SIDROLÂNDIA">SIDROLÂNDIA</option>
+                  <option value="TRÊS LAGOAS">TRÊS LAGOAS</option>
+                  <option value="OUTRA">OUTRA (ESPECIFICAR...)</option>
+                </select>
+                
+                {unidade === 'OUTRA' && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      required
+                      className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 uppercase text-sm"
+                      value={customUnidade}
+                      onChange={(e) => setCustomUnidade(e.target.value.toUpperCase())}
+                      placeholder="DIGITE O NOME DA SUA UNIDADE / CIDADE"
+                    />
+                  </div>
+                )}{unidade === 'OUTRA' && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 uppercase text-sm"
+                    value={customUnidade}
+                    onChange={(e) => setCustomUnidade(e.target.value.toUpperCase())}
+                    placeholder="DIGITE O NOME DA SUA UNIDADE / CIDADE"
+                  />
+                </div>
+              )}
               </div>
             </div>
 
@@ -218,14 +306,50 @@ export function FirstAccess() {
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
                 Unidade / Lotação
               </label>
-              <input
-                type="text"
+              <select
                 required
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 uppercase text-sm"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 uppercase text-sm bg-white"
                 value={unidade}
                 onChange={(e) => setUnidade(e.target.value.toUpperCase())}
-                placeholder="EX: LOGÍSTICA / GCIF / 1º SGBM / QCG"
-              />
+              >
+                <option value="" disabled>SELECIONE SUA UNIDADE...</option>
+                <option value="QCG">QCG - QUARTEL DO COMANDO GERAL</option>
+                <option value="DPA">DPA - DIRETORIA DE PATRIMÔNIO E ALMOXARIFADO</option>
+                <option value="ABM">ABM - ACADEMIA DE BOMBEIROS MILITAR</option>
+                <option value="1º SGBM/1º GBM - CAMPO GRANDE">1º SGBM/1º GBM - CAMPO GRANDE</option>
+                <option value="2º SGBM/1º GBM - CAMPO GRANDE">2º SGBM/1º GBM - CAMPO GRANDE</option>
+                <option value="1º SGBM/2º GBM - DOURADOS">1º SGBM/2º GBM - DOURADOS</option>
+                <option value="2º SGBM/2º GBM - DOURADOS">2º SGBM/2º GBM - DOURADOS</option>
+                <option value="1º SGBM/3º GBM - CORUMBÁ">1º SGBM/3º GBM - CORUMBÁ</option>
+                <option value="2º SGBM/3º GBM - CORUMBÁ">2º SGBM/3º GBM - CORUMBÁ</option>
+                <option value="3ª SBM/2º SGBM/3º GBM - MIRANDA">3ª SBM/2º SGBM/3º GBM - MIRANDA</option>
+                <option value="1º SGBM/4º GBM - PONTA PORÃ">1º SGBM/4º GBM - PONTA PORÃ</option>
+                <option value="1º SGBM/5º GBM - TRÊS LAGOAS">1º SGBM/5º GBM - TRÊS LAGOAS</option>
+                <option value="1º SGBM/6º GBM - CAMPO GRANDE">1º SGBM/6º GBM - CAMPO GRANDE</option>
+                <option value="1º SGBM/7º GBM - JARDIM">1º SGBM/7º GBM - JARDIM</option>
+                <option value="1º SGBM/8º GBM - NOVA ANDRADINA">1º SGBM/8º GBM - NOVA ANDRADINA</option>
+                <option value="1º SGBM/10º GBM - NAVIRAÍ">1º SGBM/10º GBM - NAVIRAÍ</option>
+                <option value="1º SGBM IND - AQUIDAUANA">1º SGBM IND - AQUIDAUANA</option>
+                <option value="2º SGBM IND - FÁTIMA DO SUL">2º SGBM IND - FÁTIMA DO SUL</option>
+                <option value="3º SGBM IND - NOVA ANDRADINA">3º SGBM IND - NOVA ANDRADINA</option>
+                <option value="4º SGBM IND - PARANAÍBA">4º SGBM IND - PARANAÍBA</option>
+                <option value="5º SGBM IND - COXIM">5º SGBM IND - COXIM</option>
+                <option value="7º SGBM IND - CHAPADÃO DO SUL">7º SGBM IND - CHAPADÃO DO SUL</option>
+                <option value="8º SGBM IND - IVINHEMA">8º SGBM IND - IVINHEMA</option>
+                <option value="9º SGBM IND - CAARAPÓ">9º SGBM IND - CAARAPÓ</option>
+                <option value="10º SGBM IND - APARECIDA DO TABOADO">10º SGBM IND - APARECIDA DO TABOADO</option>
+                <option value="11º SGBM IND - MARACAJU">11º SGBM IND - MARACAJU</option>
+                <option value="12º SGBM IND - SÃO GABRIEL DO OESTE">12º SGBM IND - SÃO GABRIEL DO OESTE</option>
+                <option value="13º SGBM IND - COSTA RICA">13º SGBM IND - COSTA RICA</option>
+                <option value="14º SGBM IND - AMAMBAI">14º SGBM IND - AMAMBAI</option>
+                <option value="15º SGBM IND - BATAGUASSU">15º SGBM IND - BATAGUASSU</option>
+                <option value="16º SGBM IND - SIDROLÂNDIA">16º SGBM IND - SIDROLÂNDIA</option>
+                <option value="17º SGBM IND - BONITO">17º SGBM IND - BONITO</option>
+                <option value="18º SGBM IND - MUNDO NOVO">18º SGBM IND - MUNDO NOVO</option>
+                <option value="20º SGBM IND - RIBAS DO RIO PARDO">20º SGBM IND - RIBAS DO RIO PARDO</option>
+                <option value="21º SGBM IND - BELA VISTA">21º SGBM IND - BELA VISTA</option>
+                <option value="OUTRA">OUTRA UNIDADE</option>
+              </select>
             </div>
           </div>
 
@@ -283,7 +407,7 @@ export function FirstAccess() {
               </div>
             </div>
             <p className="text-[11px] text-gray-500">
-              Esta nova senha pessoal substituirá a senha padrão (militar193 / cbmms_admin) e será necessária para seus próximos acessos e para validar suas assinaturas digitais de cautela.
+              Esta nova senha pessoal substituirá a senha padrão (militar193 / dpa_admin) e será necessária para seus próximos acessos e para validar suas assinaturas digitais de cautela.
             </p>
           </div>
 
@@ -296,7 +420,7 @@ export function FirstAccess() {
               <p className="font-bold text-gray-900">TERMO DE RESPONSABILIDADE OPERACIONAL - CBMMS</p>
               <p>Ao acessar e operar este sistema institucional, declaro expressamente ciência de que:</p>
               <ul className="list-disc pl-4 space-y-0.5 text-gray-600">
-                <li>O uso do sistema destina-se exclusivamente ao controle patrimonial e cautelas do GCIF.</li>
+                <li>O uso do sistema destina-se exclusivamente ao controle patrimonial e cautelas do TIF.</li>
                 <li>Minha senha funcional autentica assinaturas digitais com validade administrativa e hash SHA-256.</li>
                 <li>Sou responsável pela guarda e veracidade da conferência dos materiais e viaturas sob minha custódia.</li>
               </ul>
@@ -315,7 +439,7 @@ export function FirstAccess() {
             </label>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 space-y-3">
             <button
               type="submit"
               disabled={loading || !termsAccepted || !newPassword || !confirmPassword || newPassword.length < 6}
@@ -329,6 +453,16 @@ export function FirstAccess() {
                   <span>Concluir Primeiro Acesso e Entrar</span>
                 </>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await signOut();
+              }}
+              className="w-full bg-white text-gray-700 font-bold py-3 px-4 rounded-xl border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors shadow-sm text-sm"
+            >
+              Sair / Cancelar
             </button>
           </div>
         </form>
