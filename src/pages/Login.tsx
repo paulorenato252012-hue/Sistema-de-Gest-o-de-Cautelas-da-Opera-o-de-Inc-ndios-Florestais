@@ -69,7 +69,7 @@ export function Login() {
           // Se ele estiver cadastrado como MILITAR (por exemplo, foi retirado da condição de administrador),
           // barramos o acesso com mensagem explicativa e encerramos a sessão.
           if (perfilAcesso === 'ADMINISTRADOR') {
-            if (userData && userData.perfil !== 'ADMINISTRADOR' && !isMaster) {
+            if (userData && userData.perfil !== 'ADMINISTRADOR' && userData.perfil !== 'LOGISTICA' && !isMaster) {
               await signOut(auth);
               setError(`A matrícula ${cleanMatricula} está cadastrada com perfil de Militar do Ciclo e não tem permissão de Administrador. Para acessar, selecione a aba "Militar do Ciclo" acima.`);
               setLoading(false);
@@ -307,8 +307,8 @@ export function Login() {
                 onChange={(e) => setSenha(e.target.value)}
                 placeholder={
                   perfilAcesso === 'MILITAR'
-                    ? `Digite sua senha ou a padrão (${SENHA_PADRAO_MILITAR})`
-                    : 'Digite sua senha ou a senha institucional'
+                    ? 'Digite sua senha'
+                    : 'Digite sua senha'
                 }
               />
               <button
