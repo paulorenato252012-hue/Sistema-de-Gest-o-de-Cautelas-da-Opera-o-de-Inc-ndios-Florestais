@@ -301,56 +301,6 @@ export function FirstAccess() {
               )}
               </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                Unidade / Lotação
-              </label>
-              <select
-                required
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 uppercase text-sm bg-white"
-                value={unidade}
-                onChange={(e) => setUnidade(e.target.value.toUpperCase())}
-              >
-                <option value="" disabled>SELECIONE SUA UNIDADE...</option>
-                <option value="QCG">QCG - QUARTEL DO COMANDO GERAL</option>
-                <option value="DPA">DPA - DIRETORIA DE PATRIMÔNIO E ALMOXARIFADO</option>
-                <option value="ABM">ABM - ACADEMIA DE BOMBEIROS MILITAR</option>
-                <option value="1º SGBM/1º GBM - CAMPO GRANDE">1º SGBM/1º GBM - CAMPO GRANDE</option>
-                <option value="2º SGBM/1º GBM - CAMPO GRANDE">2º SGBM/1º GBM - CAMPO GRANDE</option>
-                <option value="1º SGBM/2º GBM - DOURADOS">1º SGBM/2º GBM - DOURADOS</option>
-                <option value="2º SGBM/2º GBM - DOURADOS">2º SGBM/2º GBM - DOURADOS</option>
-                <option value="1º SGBM/3º GBM - CORUMBÁ">1º SGBM/3º GBM - CORUMBÁ</option>
-                <option value="2º SGBM/3º GBM - CORUMBÁ">2º SGBM/3º GBM - CORUMBÁ</option>
-                <option value="3ª SBM/2º SGBM/3º GBM - MIRANDA">3ª SBM/2º SGBM/3º GBM - MIRANDA</option>
-                <option value="1º SGBM/4º GBM - PONTA PORÃ">1º SGBM/4º GBM - PONTA PORÃ</option>
-                <option value="1º SGBM/5º GBM - TRÊS LAGOAS">1º SGBM/5º GBM - TRÊS LAGOAS</option>
-                <option value="1º SGBM/6º GBM - CAMPO GRANDE">1º SGBM/6º GBM - CAMPO GRANDE</option>
-                <option value="1º SGBM/7º GBM - JARDIM">1º SGBM/7º GBM - JARDIM</option>
-                <option value="1º SGBM/8º GBM - NOVA ANDRADINA">1º SGBM/8º GBM - NOVA ANDRADINA</option>
-                <option value="1º SGBM/10º GBM - NAVIRAÍ">1º SGBM/10º GBM - NAVIRAÍ</option>
-                <option value="1º SGBM IND - AQUIDAUANA">1º SGBM IND - AQUIDAUANA</option>
-                <option value="2º SGBM IND - FÁTIMA DO SUL">2º SGBM IND - FÁTIMA DO SUL</option>
-                <option value="3º SGBM IND - NOVA ANDRADINA">3º SGBM IND - NOVA ANDRADINA</option>
-                <option value="4º SGBM IND - PARANAÍBA">4º SGBM IND - PARANAÍBA</option>
-                <option value="5º SGBM IND - COXIM">5º SGBM IND - COXIM</option>
-                <option value="7º SGBM IND - CHAPADÃO DO SUL">7º SGBM IND - CHAPADÃO DO SUL</option>
-                <option value="8º SGBM IND - IVINHEMA">8º SGBM IND - IVINHEMA</option>
-                <option value="9º SGBM IND - CAARAPÓ">9º SGBM IND - CAARAPÓ</option>
-                <option value="10º SGBM IND - APARECIDA DO TABOADO">10º SGBM IND - APARECIDA DO TABOADO</option>
-                <option value="11º SGBM IND - MARACAJU">11º SGBM IND - MARACAJU</option>
-                <option value="12º SGBM IND - SÃO GABRIEL DO OESTE">12º SGBM IND - SÃO GABRIEL DO OESTE</option>
-                <option value="13º SGBM IND - COSTA RICA">13º SGBM IND - COSTA RICA</option>
-                <option value="14º SGBM IND - AMAMBAI">14º SGBM IND - AMAMBAI</option>
-                <option value="15º SGBM IND - BATAGUASSU">15º SGBM IND - BATAGUASSU</option>
-                <option value="16º SGBM IND - SIDROLÂNDIA">16º SGBM IND - SIDROLÂNDIA</option>
-                <option value="17º SGBM IND - BONITO">17º SGBM IND - BONITO</option>
-                <option value="18º SGBM IND - MUNDO NOVO">18º SGBM IND - MUNDO NOVO</option>
-                <option value="20º SGBM IND - RIBAS DO RIO PARDO">20º SGBM IND - RIBAS DO RIO PARDO</option>
-                <option value="21º SGBM IND - BELA VISTA">21º SGBM IND - BELA VISTA</option>
-                <option value="OUTRA">OUTRA UNIDADE</option>
-              </select>
-            </div>
           </div>
 
           {/* NOVA SENHA PESSOAL */}
