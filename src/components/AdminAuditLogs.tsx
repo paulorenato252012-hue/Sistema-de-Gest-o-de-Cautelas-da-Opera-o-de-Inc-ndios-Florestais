@@ -76,7 +76,15 @@ export function AdminAuditLogs() {
                     <div className="text-xs text-gray-500 font-mono">{log.userEmail}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                    <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      log.action.includes('EXCLUIR')
+                        ? 'bg-red-100 text-red-800 border border-red-200'
+                        : log.action.includes('EDITAR')
+                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                        : log.action.includes('CRIAR')
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
                       {log.action}
                     </span>
                   </td>

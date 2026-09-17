@@ -8,7 +8,10 @@ import { ArrowLeft, Save, FileSignature, Download, FileCheck2, ShieldCheck, Send
 import { SignatureModal } from '../components/SignatureModal';
 import { DescautelaModal } from '../components/DescautelaModal';
 import { CautionForm } from '../components/CautionForm';
+import { DeleteCautionModal } from '../components/DeleteCautionModal';
+import { DeleteDescautelaModal } from '../components/DeleteDescautelaModal';
 import { generateCautionPDF, generateDescautelaPDF } from '../lib/pdfGenerator';
+import { sendCautionPdfByEmail } from '../lib/emailService';
 
 export function CautionView() {
   const { id } = useParams();
@@ -24,6 +27,8 @@ export function CautionView() {
   const [loading, setLoading] = useState(true);
   const [showSignature, setShowSignature] = useState(false);
   const [showDescautela, setShowDescautela] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteDescautelaModal, setShowDeleteDescautelaModal] = useState(false);
   const [requestingDescautela, setRequestingDescautela] = useState(false);
   const [downloadingDescautela, setDownloadingDescautela] = useState(false);
 
@@ -138,26 +143,6 @@ export function CautionView() {
     }
   };
 
-  const handleDeleteCaution = async () => {
-    if (!caution || !id || !window.confirm('Tem certeza que deseja excluir esta cautela? Esta ação é irreversível.')) return;
-    try {
-      // Excluir assinaturas
-      for (const sig of signatures) {
-        await deleteDoc(doc(db, 'cautions', id, 'signatures', sig.id));
-      }
-      // Excluir itens
-      for (const item of items) {
-        await deleteDoc(doc(db, 'cautions', id, 'items', item.id));
-      }
-      // Excluir a cautela em si
-      await deleteDoc(doc(db, 'cautions', id));
-      navigate(-1);
-    } catch (err) {
-      console.error('Erro ao excluir cautela:', err);
-      setNotification({ type: 'error', message: 'Erro ao excluir cautela.' });
-    }
-  };
-
   const handleReenviarAssinatura = async () => {
     if (!caution || !id || !window.confirm('Tem certeza que deseja retornar esta cautela para a fase de assinatura do militar?')) return;
     try {
@@ -187,7 +172,7 @@ export function CautionView() {
   const isAdmin = userProfile?.perfil === 'ADMINISTRADOR';
   const isMilitar = userProfile?.perfil === 'MILITAR';
   const canAdminDescautelar = isAdmin && caution && ['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(caution.status);
-  const canMilitarRequestDescautela = isMilitar && caution && caution.status === 'CAUTELADA';
+  const canMilitarRequestDescautela = isMilitar && caution && caution.status === 'CAUTELADA' && caution.type !== 'CESTA_BASICA';
 
   return (
     <div className="max-w-4xl mx-auto pb-12">
@@ -299,14 +284,25 @@ export function CautionView() {
                 </button>
               )}
               
-              {caution && (isAdmin || (caution.status === 'RASCUNHO' && caution.responsibleUserId === userProfile?.id)) && (
+              {caution && isAdmin && (
                 <button
-                  onClick={handleDeleteCaution}
+                  onClick={() => setShowDeleteModal(true)}
                   className="flex items-center px-3 py-1 bg-red-100 text-red-800 border border-red-200 rounded-lg hover:bg-red-200 text-xs font-semibold transition-colors"
-                  title="Excluir Cautela"
+                  title="Excluir Cautela (Exige Senha de Administrador e Grava na Auditoria)"
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  Excluir
+                  Excluir Cautela
+                </button>
+              )}
+
+              {caution && isAdmin && caution.status === 'DESCAUTELADA' && (
+                <button
+                  onClick={() => setShowDeleteDescautelaModal(true)}
+                  className="flex items-center px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 rounded-lg hover:bg-amber-200 text-xs font-semibold transition-colors"
+                  title="Excluir ou Anular Descautela (Exige Senha de Administrador e Grava na Auditoria)"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5 text-amber-700" />
+                  Excluir / Anular Descautela
                 </button>
               )}
             </div>
@@ -410,9 +406,28 @@ export function CautionView() {
           cautionData={caution}
           type="RETIRADA"
           onClose={() => setShowSignature(false)}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowSignature(false);
-            fetchCautionData();
+            await fetchCautionData();
+
+            // Envia o PDF de cautela assinado para o e-mail cadastrado do militar
+            try {
+              const targetEmail = militaryUser?.email || userProfile?.email || '';
+              if (targetEmail && targetEmail.includes('@') && !targetEmail.endsWith('@cbmms.internal')) {
+                const pdfDoc = generateCautionPDF(caution, items, signatures, militaryUser || (userProfile as User));
+                const pdfBase64 = pdfDoc.output('datauristring').split(',')[1];
+                await sendCautionPdfByEmail(
+                  targetEmail,
+                  militaryUser?.nomeCompleto || userProfile?.nomeCompleto || 'Militar',
+                  militaryUser?.matricula || userProfile?.matricula || caution.responsibleUserId,
+                  caution.id,
+                  caution.type,
+                  pdfBase64
+                );
+              }
+            } catch (emailErr) {
+              console.warn('Erro ao enviar comprovante de cautela por e-mail:', emailErr);
+            }
           }}
         />
       )}
@@ -423,6 +438,30 @@ export function CautionView() {
           onClose={() => setShowDescautela(false)}
           onSuccess={() => {
             setShowDescautela(false);
+            fetchCautionData();
+          }}
+        />
+      )}
+
+      {showDeleteModal && caution && (
+        <DeleteCautionModal
+          caution={caution}
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onSuccess={() => {
+            setShowDeleteModal(false);
+            navigate('/dashboard', { replace: true });
+          }}
+        />
+      )}
+
+      {showDeleteDescautelaModal && caution && (
+        <DeleteDescautelaModal
+          caution={caution}
+          isOpen={showDeleteDescautelaModal}
+          onClose={() => setShowDeleteDescautelaModal(false)}
+          onSuccess={() => {
+            setShowDeleteDescautelaModal(false);
             fetchCautionData();
           }}
         />

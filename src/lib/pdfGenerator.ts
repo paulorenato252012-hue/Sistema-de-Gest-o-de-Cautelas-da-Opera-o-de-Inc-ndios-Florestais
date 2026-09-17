@@ -3,6 +3,24 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { Caution, CautionItem, Signature, User } from './types';
 
+/**
+ * Formata a condição do material para termos institucionais padronizados
+ * (sem alteração, com alteração, etc.)
+ */
+const formatMaterialCondition = (cond?: string): string => {
+  if (!cond) return 'Sem Alteração';
+  const c = cond.trim();
+  if (c.toLowerCase().includes('sem')) return 'Sem Alteração';
+  if (c.toLowerCase().includes('bom')) return 'Sem Alteração (Bom)';
+  if (c.toLowerCase().includes('regular')) return 'Com Alteração (Regular)';
+  if (c.toLowerCase().includes('avaria')) return 'Com Alteração (Avaria)';
+  if (c.toLowerCase().includes('faltante') || c.toLowerCase().includes('falta')) return 'Faltante';
+  if (c.toLowerCase().includes('consumid')) return 'Consumido';
+  if (c.toLowerCase().includes('não se aplica') || c.toLowerCase().includes('nao_se_aplica')) return 'Não se Aplica';
+  if (c.toLowerCase().includes('alter')) return 'Com Alteração';
+  return c;
+};
+
 export const generateCautionPDF = (
   caution: Caution, 
   items: CautionItem[], 
@@ -68,28 +86,48 @@ export const generateCautionPDF = (
   const tableStartY = caution.localEmpenhado ? milY + 18 : milY + 14;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text('RELAÇÃO DE MATERIAIS / EQUIPAMENTOS', 14, tableStartY);
+  doc.text(caution.type === 'CESTA_BASICA' ? 'RELAÇÃO DE ENTREGA (CESTA BÁSICA)' : 'RELAÇÃO DE MATERIAIS / EQUIPAMENTOS', 14, tableStartY);
 
-  const tableData = items.length > 0 
-    ? items.map((item, index) => [
-        index + 1,
-        item.identification && item.identification !== 'N/A' && item.identification !== 'S/N'
-          ? `${item.description} (Nº: ${item.identification})`
-          : item.description,
-        item.quantity.toString(),
-        item.conditionWithdrawal || 'Sem Alteração',
-        item.quantityReturned !== undefined ? item.quantityReturned.toString() : '-',
-        item.conditionReturn || '-'
-      ])
-    : [['-', 'Nenhum material listado', '-', '-', '-', '-']];
+  let tableData: any[][] = [];
+  
+  if (caution.type === 'CESTA_BASICA') {
+    tableData = [[
+      '1',
+      'Cesta Básica',
+      caution.cestaBasicaQtd?.toString() || '0',
+      caution.cestaBasicaVolumes?.toString() || '0',
+      caution.cestaBasicaObservacoes || 'Normal'
+    ]];
+  } else {
+    tableData = items.length > 0 
+      ? items.map((item, index) => {
+          const estadoMaterial = formatMaterialCondition(item.conditionWithdrawal);
+          const alteracaoApontada = (item.observationWithdrawal && item.observationWithdrawal.trim().length > 0)
+            ? item.observationWithdrawal.trim()
+            : 'Normal';
+
+          return [
+            index + 1,
+            item.identification && item.identification !== 'N/A' && item.identification !== 'S/N'
+              ? `${item.description} (Nº: ${item.identification})`
+              : item.description,
+            item.quantity.toString(),
+            estadoMaterial,
+            alteracaoApontada
+          ];
+        })
+      : [['-', 'Nenhum material listado', '-', '-', '-']];
+  }
 
   autoTable(doc, {
     startY: tableStartY + 4,
-    head: [['Item', 'Descrição / Patrimônio', 'Qtd Cautelada', 'Est. Cautela', 'Qtd Devolvida', 'Est. Devolução']],
+    head: caution.type === 'CESTA_BASICA' 
+      ? [['Item', 'Descrição', 'Quantidade de Cestas', 'Nº de Volumes', 'Observações']]
+      : [['Item', 'Descrição / Patrimônio', 'Qtd Cautelada', 'Estado do Material', 'Alteração Apontada']],
     body: tableData,
     theme: 'grid',
     headStyles: { fillColor: [153, 27, 27], textColor: [255, 255, 255] },
-    styles: { fontSize: 8.5, cellPadding: 2 },
+    styles: { fontSize: 8.5, cellPadding: 2.5 },
   });
 
   // --- SIGNATURES ---
@@ -151,6 +189,7 @@ export const generateCautionPDF = (
 
   // Save the PDF
   doc.save(`cautela_${caution.id.substring(0, 8)}.pdf`);
+  return doc;
 };
 
 export const generateDescautelaPDF = (
@@ -225,24 +264,93 @@ export const generateDescautelaPDF = (
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text('CONFERÊNCIA FÍSICA E ESTADO DOS MATERIAIS DEVOLVIDOS', 14, tableStartY);
+  doc.text(caution.type === 'CESTA_BASICA' ? 'CONFERÊNCIA DA ENTREGA (CESTA BÁSICA)' : 'CONFERÊNCIA FÍSICA E ESTADO DOS MATERIAIS DEVOLVIDOS', 14, tableStartY);
 
-  const tableData = items.length > 0
-    ? items.map((item, index) => [
-        index + 1,
-        item.identification && item.identification !== 'N/A' && item.identification !== 'S/N'
-          ? `${item.description} (Nº: ${item.identification})`
-          : item.description,
-        item.quantity.toString(),
-        item.quantityReturned !== undefined ? item.quantityReturned.toString() : item.quantity.toString(),
-        item.conditionReturn || 'SEM_ALTERACAO',
-        item.observationReturn || '-'
-      ])
-    : [['-', 'Nenhum material listado', '-', '-', '-', '-']];
+  // Conforme solicitação: No documento de descautela no item "Estado na Devolução" fazer constar,
+  // caso o militar não altere para o status "Sem alteração", o status de alteração marcado pelo militar na cautela de origem.
+  // Se o militar, por ventura no pedido de descautela mudar o status para "sem alteração" mudar o item "Observações/Avarias" para "Normal".
+  
+  let tableData: any[][] = [];
+
+  if (caution.type === 'CESTA_BASICA') {
+    tableData = [[
+      '1',
+      'Cesta Básica',
+      caution.cestaBasicaQtd?.toString() || '0',
+      'Entregue / Finalizado',
+      caution.cestaBasicaObservacoes || 'Normal'
+    ]];
+  } else {
+    tableData = items.length > 0
+      ? items.map((item, index) => {
+          const condRet = (item.conditionReturn || '').trim();
+          
+          // Verifica se na devolução foi definido "Sem alteração"
+          const isSemAlteracao = 
+            condRet === 'SEM_ALTERACAO' ||
+            condRet.toLowerCase() === 'sem alteração' ||
+            condRet.toLowerCase() === 'sem alteracao';
+
+          let estadoDevolucao = '';
+          let observacoesAvarias = '';
+
+          if (isSemAlteracao) {
+            // Se o militar no pedido de descautela mudar o status para "sem alteração",
+            // mudar o item "Observações/Avarias" para "Normal"
+            estadoDevolucao = 'Sem Alteração';
+            observacoesAvarias = 'Normal';
+          } else {
+            // Caso o militar NÃO altere para o status "Sem alteração":
+            // Constar o Status de alteração marcado pelo militar na cautela de origem
+            const origCond = formatMaterialCondition(item.conditionWithdrawal);
+
+            if (condRet && condRet !== 'SEM_ALTERACAO') {
+              if (condRet === 'COM_ALTERACAO') {
+                estadoDevolucao = origCond !== 'Sem Alteração' ? origCond : 'Com Alteração';
+              } else if (condRet === 'AVARIADO') {
+                estadoDevolucao = 'Com Alteração (Avaria)';
+              } else if (condRet === 'FALTANTE') {
+                estadoDevolucao = 'Faltante / Extraviado';
+              } else if (condRet === 'CONSUMIDO') {
+                estadoDevolucao = 'Consumido em Operação';
+              } else if (condRet === 'NAO_SE_APLICA') {
+                estadoDevolucao = 'Não se Aplica';
+              } else {
+                estadoDevolucao = formatMaterialCondition(condRet);
+              }
+            } else {
+              // Se não especificado ou manteve a condição original
+              estadoDevolucao = origCond;
+            }
+
+            // Observações / Avarias:
+            // Se não for "Sem Alteração", traz a observação de retorno se houver, ou a da cautela de origem
+            const obs = (item.observationReturn && item.observationReturn.trim() !== 'Normal'
+              ? item.observationReturn
+              : item.observationWithdrawal) || '';
+
+            observacoesAvarias = obs.trim() ? obs.trim() : 'Normal';
+          }
+
+          return [
+            index + 1,
+            item.identification && item.identification !== 'N/A' && item.identification !== 'S/N'
+              ? `${item.description} (Nº: ${item.identification})`
+              : item.description,
+            item.quantity.toString(),
+            item.quantityReturned !== undefined ? item.quantityReturned.toString() : item.quantity.toString(),
+            estadoDevolucao,
+            observacoesAvarias
+          ];
+        })
+      : [['-', 'Nenhum material listado', '-', '-', '-', '-']];
+  }
 
   autoTable(doc, {
     startY: tableStartY + 4,
-    head: [['Item', 'Material / Patrimônio', 'Qtd Cautelada', 'Qtd Devolvida', 'Estado na Devolução', 'Observações / Avarias']],
+    head: caution.type === 'CESTA_BASICA'
+      ? [['Item', 'Descrição', 'Qtd (Recebida)', 'Situação Final', 'Observações']]
+      : [['Item', 'Material / Patrimônio', 'Qtd Cautelada', 'Qtd Devolvida', 'Estado na Devolução', 'Observações / Avarias']],
     body: tableData,
     theme: 'grid',
     headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255] },
@@ -307,4 +415,5 @@ export const generateDescautelaPDF = (
   }
 
   doc.save(`descautela_${caution.id.substring(0, 8)}.pdf`);
+  return doc;
 };

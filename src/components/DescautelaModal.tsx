@@ -5,6 +5,7 @@ import { auth, db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Caution, CautionItem, Signature, User } from '../lib/types';
 import { generateCautionPDF, generateDescautelaPDF } from '../lib/pdfGenerator';
+import { sendDescautelaPdfByEmail } from '../lib/emailService';
 import CryptoJS from 'crypto-js';
 import { 
   X, 
@@ -60,11 +61,12 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
     const mapWithdrawalToReturnCondition = (wCond: string) => {
       if (!wCond) return 'SEM_ALTERACAO';
       const c = wCond.toLowerCase();
+      if (c.includes('sem') || c.includes('bom')) return 'SEM_ALTERACAO';
       if (c.includes('avaria')) return 'AVARIADO';
       if (c.includes('falta') || c.includes('extraviad')) return 'FALTANTE';
       if (c.includes('consumid')) return 'CONSUMIDO';
-      if (c.includes('alter')) return 'COM_ALTERACAO';
-      return 'SEM_ALTERACAO';
+      if (c.includes('regular') || c.includes('alter') || c.includes('desgaste')) return 'COM_ALTERACAO';
+      return 'COM_ALTERACAO';
     };
 
     const fetchItems = async () => {
@@ -77,10 +79,13 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
         // Pre-fill return values
         const initialReturnMap: Record<string, any> = {};
         loaded.forEach(it => {
+          const initialCond = it.conditionReturn || mapWithdrawalToReturnCondition(it.conditionWithdrawal);
+          const isSemAlt = initialCond === 'SEM_ALTERACAO';
+
           initialReturnMap[it.id] = {
             quantityReturned: it.quantityReturned !== undefined ? it.quantityReturned : it.quantity,
-            conditionReturn: it.conditionReturn || mapWithdrawalToReturnCondition(it.conditionWithdrawal),
-            observationReturn: it.observationReturn || it.observationWithdrawal || ''
+            conditionReturn: initialCond,
+            observationReturn: isSemAlt ? 'Normal' : (it.observationReturn || it.observationWithdrawal || '')
           };
         });
         setReturnItemsData(initialReturnMap);
@@ -104,23 +109,39 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
   }, [caution]);
 
   const handleItemChange = (itemId: string, field: 'quantityReturned' | 'conditionReturn' | 'observationReturn', value: any) => {
-    setReturnItemsData(prev => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        [field]: value
+    setReturnItemsData(prev => {
+      const cur = prev[itemId] || { quantityReturned: 1, conditionReturn: 'SEM_ALTERACAO', observationReturn: 'Normal' };
+      let newObs = cur.observationReturn;
+
+      // Se o militar/administrador mudar o status para "sem alteração", mudar Observações/Avarias para "Normal"
+      if (field === 'conditionReturn') {
+        if (value === 'SEM_ALTERACAO') {
+          newObs = 'Normal';
+        } else if (newObs === 'Normal') {
+          const origItem = items.find(i => i.id === itemId);
+          newObs = origItem?.observationWithdrawal || '';
+        }
       }
-    }));
+
+      return {
+        ...prev,
+        [itemId]: {
+          ...cur,
+          [field]: value,
+          ...(field === 'conditionReturn' ? { observationReturn: newObs } : {})
+        }
+      };
+    });
   };
 
   const markAllAsOk = () => {
-    setReturnItemsData(prev => {
+    setReturnItemsData(() => {
       const updated: Record<string, any> = {};
       items.forEach(it => {
         updated[it.id] = {
           quantityReturned: it.quantity,
           conditionReturn: 'SEM_ALTERACAO',
-          observationReturn: prev[it.id]?.observationReturn || ''
+          observationReturn: 'Normal'
         };
       });
       return updated;
@@ -271,11 +292,24 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
       setFinalSignatures(allSigs);
       setIsCompleted(true);
 
-      // Trigger automatic PDF download
+      // Trigger automatic PDF download and send to military's email
       try {
-        generateDescautelaPDF(finalCautionObj, updatedItemsList, allSigs, militaryOwner || (userProfile as User), userProfile);
+        const pdfDoc = generateDescautelaPDF(finalCautionObj, updatedItemsList, allSigs, militaryOwner || (userProfile as User), userProfile);
+        
+        // Envia o PDF de descautela para o e-mail cadastrado do militar
+        const targetEmail = militaryOwner?.email || '';
+        if (targetEmail && targetEmail.includes('@') && !targetEmail.endsWith('@cbmms.internal')) {
+          const pdfBase64 = pdfDoc.output('datauristring').split(',')[1];
+          await sendDescautelaPdfByEmail(
+            targetEmail,
+            militaryOwner?.nomeCompleto || militaryOwner?.nomeGuerra || 'Militar',
+            militaryOwner?.matricula || caution.responsibleUserId,
+            caution.id,
+            pdfBase64
+          );
+        }
       } catch (pdfErr) {
-        console.warn('Erro no download automático de PDF:', pdfErr);
+        console.warn('Erro no processamento ou envio de e-mail do PDF de descautela:', pdfErr);
       }
     } catch (err: any) {
       if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { updatePassword } from 'firebase/auth';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { updatePassword, deleteUser } from 'firebase/auth';
+import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { ShieldCheck, UserCheck, Wrench, Shield, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, UserCheck, Wrench, Shield, CheckCircle2, Eye, EyeOff, Mail } from 'lucide-react';
 
 export function FirstAccess() {
   const { currentUser, userProfile, signOut } = useAuth();
@@ -14,6 +14,7 @@ export function FirstAccess() {
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [nomeGuerra, setNomeGuerra] = useState('');
   const [postoGraduacao, setPostoGraduacao] = useState('SD BM');
+  const [email, setEmail] = useState('');
   const [unidade, setUnidade] = useState('');
   const [customUnidade, setCustomUnidade] = useState('');
   
@@ -34,6 +35,10 @@ export function FirstAccess() {
       setNomeCompleto(userProfile.nomeCompleto?.startsWith('Militar ') || userProfile.nomeCompleto?.startsWith('Administrador ') ? '' : userProfile.nomeCompleto);
       setNomeGuerra(userProfile.nomeGuerra?.startsWith('MILITAR ') ? '' : userProfile.nomeGuerra);
       setPostoGraduacao(userProfile.postoGraduacao || (isAdm ? '1º TEN BM' : 'SD BM'));
+      // Preenche o email se já tiver ou se for email real
+      if (userProfile.email && !userProfile.email.endsWith('@cbmms.internal')) {
+        setEmail(userProfile.email);
+      }
       const existingUnidade = userProfile.unidade || (isAdm ? 'DPA' : '');
       const validOptions = ['QCG', 'DPA', 'ABM', 'AMAMBAI', 'APARECIDA DO TABOADO', 'AQUIDAUANA', 'BATAGUASSU', 'BELA VISTA', 'BONITO', 'CAARAPÓ', 'CAMPO GRANDE', 'CHAPADÃO DO SUL', 'CORUMBÁ', 'COSTA RICA', 'COXIM', 'DOURADOS', 'FÁTIMA DO SUL', 'IVINHEMA', 'JARDIM', 'MARACAJU', 'MIRANDA', 'MUNDO NOVO', 'NAVIRAÍ', 'NOVA ANDRADINA', 'PARANAÍBA', 'PONTA PORÃ', 'RIBAS DO RIO PARDO', 'SÃO GABRIEL DO OESTE', 'SIDROLÂNDIA', 'TRÊS LAGOAS'];
       
@@ -66,6 +71,12 @@ export function FirstAccess() {
       return;
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      setError('Por favor, informe um endereço de e-mail válido para recuperação de senha e recebimento de PDFs.');
+      return;
+    }
+
     if (!termsAccepted) {
       setError('Você deve aceitar o termo de responsabilidade para prosseguir.');
       return;
@@ -83,10 +94,12 @@ export function FirstAccess() {
           nomeCompleto: nomeCompleto.trim().toUpperCase(),
           nomeGuerra: nomeGuerra.trim().toUpperCase(),
           postoGraduacao,
+          email: cleanEmail,
           unidade: finalUnidade,
           perfil,
           ativo: true,
           passwordChangeRequired: false,
+          firstAccessCompleted: true,
           termsAccepted: true,
           termsVersion: 'v1.0',
           termsAcceptedAt: serverTimestamp()
@@ -108,6 +121,40 @@ export function FirstAccess() {
       } else {
         setError('Erro ao salvar os dados. ' + (err.message || 'Tente novamente.'));
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelFirstAccess = async () => {
+    try {
+      setLoading(true);
+      // Se o usuário está cancelando sem nunca ter concluído o primeiro acesso,
+      // removemos o registro do Firestore e da autenticação para não deixar "usuário fantasma/incompleto"
+      if (currentUser && (!userProfile?.termsAccepted || userProfile?.firstAccessCompleted === false || userProfile?.passwordChangeRequired)) {
+        try {
+          await deleteDoc(doc(db, 'users', currentUser.uid));
+        } catch (e) {
+          console.warn('Erro ao remover doc de usuário incompleto:', e);
+        }
+        if (userProfile?.id && userProfile.id !== currentUser.uid) {
+          try {
+            await deleteDoc(doc(db, 'users', userProfile.id));
+          } catch (e) {
+            console.warn('Erro ao remover doc secundário:', e);
+          }
+        }
+        try {
+          await deleteUser(currentUser);
+          return;
+        } catch (authDelErr) {
+          console.warn('Não foi possível excluir conta auth no cancelamento:', authDelErr);
+        }
+      }
+      await signOut();
+    } catch (e) {
+      console.error('Erro ao cancelar primeiro acesso:', e);
+      await signOut();
     } finally {
       setLoading(false);
     }
@@ -190,6 +237,26 @@ export function FirstAccess() {
                 onChange={(e) => setNomeCompleto(e.target.value.toUpperCase())}
                 placeholder="Ex: JOSÉ DA SILVA SANTOS"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                E-mail Pessoal / Funcional (Para recuperação de senha e envio de Cautelas/Descautelas) <span className="text-red-600">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  className="w-full pl-10 pr-3.5 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm lowercase"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value.toLowerCase())}
+                  placeholder="exemplo@gmail.com ou militar@bombeiros.ms.gov.br"
+                />
+                <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              </div>
+              <p className="text-[11px] text-gray-500 mt-1">
+                Este e-mail será utilizado para recuperação de senha caso você a esqueça e para envio dos PDFs gerados de cautelas e descautelas.
+              </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -407,9 +474,8 @@ export function FirstAccess() {
 
             <button
               type="button"
-              onClick={async () => {
-                await signOut();
-              }}
+              onClick={handleCancelFirstAccess}
+              disabled={loading}
               className="w-full bg-white text-gray-700 font-bold py-3 px-4 rounded-xl border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors shadow-sm text-sm"
             >
               Sair / Cancelar

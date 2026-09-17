@@ -20,7 +20,8 @@ import {
   Info,
   RefreshCw,
   Eye,
-  AlertCircle
+  AlertCircle,
+  ShoppingBag
 } from 'lucide-react';
 
 export function MilitarPanel() {
@@ -252,6 +253,8 @@ export function MilitarPanel() {
         return <Truck className="w-4 h-4 text-red-800" />;
       case 'MATERIAL_PADRONIZADO':
         return <Boxes className="w-4 h-4 text-red-800" />;
+      case 'CESTA_BASICA':
+        return <ShoppingBag className="w-4 h-4 text-emerald-800" />;
       default:
         return <Package className="w-4 h-4 text-red-800" />;
     }
@@ -330,7 +333,7 @@ export function MilitarPanel() {
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Painel do Militar do Ciclo</h1>
           <p className="text-xs text-gray-500 mt-1">
-            Confecção de Cautelas, Solicitação de Descautela aos Administradores e Termos em PDF • CBMMS
+            Confecção de Cautelas, Solicitação de Descautela aos Administradores e Termos em PDF • DPA
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -519,7 +522,7 @@ export function MilitarPanel() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
               <button 
                 onClick={() => navigate('/cautions/new?type=MATERIAL_PADRONIZADO')}
                 className="border-2 border-dashed border-gray-200 rounded-xl p-5 hover:border-red-600 hover:bg-red-50/50 transition-all text-left group"
@@ -564,6 +567,21 @@ export function MilitarPanel() {
                   Inclusão livre de equipamentos avulsos, rádios HT suplementares ou materiais de apoio logístico sob demanda.
                 </span>
               </button>
+
+              <button 
+                onClick={() => navigate('/cautions/new?type=CESTA_BASICA')}
+                className="border-2 border-dashed border-emerald-200 bg-emerald-50/20 rounded-xl p-5 hover:border-emerald-600 hover:bg-emerald-50/60 transition-all text-left group"
+              >
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+                    <ShoppingBag className="w-5 h-5 text-emerald-800" />
+                  </div>
+                  <span className="block font-bold text-gray-900 group-hover:text-emerald-900">Termo de Entrega de Cesta Básica</span>
+                </div>
+                <span className="block text-xs text-gray-500 leading-relaxed">
+                  Recebimento de cestas básicas com registro de quantidade, número de volumes e registro fotográfico obrigatório para assinatura.
+                </span>
+              </button>
             </div>
           </div>
         )}
@@ -588,7 +606,8 @@ export function MilitarPanel() {
                 {ativasCautions.map(caution => {
                   const typeLabel = 
                     caution.type === 'MATERIAL_PADRONIZADO' ? 'Materiais Padronizados' :
-                    caution.type === 'VIATURA' ? 'Checklist de Viatura' : 'Cautela Específica';
+                    caution.type === 'VIATURA' ? 'Checklist de Viatura' :
+                    caution.type === 'CESTA_BASICA' ? 'Termo de Entrega de Cesta Básica' : 'Cautela Específica';
 
                   return (
                     <li key={caution.id} className="p-4 sm:px-6 hover:bg-gray-50 transition-colors">
@@ -609,7 +628,7 @@ export function MilitarPanel() {
 
                         <div className="flex flex-wrap items-center gap-2">
                           {/* ÍCONE EXCLUSIVO PARA SOLICITAR DESCAUTELA AOS ADMINISTRADORES AO FINAL DO CICLO */}
-                          {caution.status === 'CAUTELADA' && (
+                          {caution.status === 'CAUTELADA' && caution.type !== 'CESTA_BASICA' && (
                             <button
                               type="button"
                               onClick={() => handleRequestDescautela(caution)}
@@ -622,7 +641,7 @@ export function MilitarPanel() {
                             </button>
                           )}
 
-                          {caution.status === 'DEVOLUCAO_INICIADA' && (
+                          {caution.status === 'DEVOLUCAO_INICIADA' && caution.type !== 'CESTA_BASICA' && (
                             <span
                               className="inline-flex items-center px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-xs transition-all"
                               title="Descautela solicitada! Apresente o material para a Logística/Administrador."
@@ -698,7 +717,8 @@ export function MilitarPanel() {
                   {solicitacoesDescautela.map(caution => {
                     const typeLabel = 
                       caution.type === 'MATERIAL_PADRONIZADO' ? 'Materiais Padronizados' :
-                      caution.type === 'VIATURA' ? 'Checklist de Viatura' : 'Cautela Específica';
+                      caution.type === 'VIATURA' ? 'Checklist de Viatura' :
+                      caution.type === 'CESTA_BASICA' ? 'Termo de Entrega de Cesta Básica' : 'Cautela Específica';
 
                     return (
                       <li key={caution.id} className="p-4 sm:px-6 hover:bg-gray-50 transition-colors">
@@ -788,7 +808,8 @@ export function MilitarPanel() {
                   {historicoCautions.map(caution => {
                     const typeLabel = 
                       caution.type === 'MATERIAL_PADRONIZADO' ? 'Materiais Padronizados' :
-                      caution.type === 'VIATURA' ? 'Checklist de Viatura' : 'Cautela Específica';
+                      caution.type === 'VIATURA' ? 'Checklist de Viatura' :
+                      caution.type === 'CESTA_BASICA' ? 'Termo de Entrega de Cesta Básica' : 'Cautela Específica';
 
                     return (
                       <li key={caution.id} className="p-4 sm:px-6 hover:bg-gray-50 transition-colors">

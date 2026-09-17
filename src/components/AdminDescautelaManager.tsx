@@ -24,9 +24,12 @@ import {
   EyeOff, 
   FileSignature, 
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Trash2,
+  ShoppingBag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DeleteDescautelaModal } from './DeleteDescautelaModal';
 
 export function AdminDescautelaManager() {
   const { userProfile } = useAuth();
@@ -40,10 +43,11 @@ export function AdminDescautelaManager() {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCycle, setSelectedCycle] = useState('TODOS');
-  const [selectedStatusTab, setSelectedStatusTab] = useState<'PENDENTES' | 'CONCLUIDAS'>('PENDENTES');
+  const [selectedStatusTab, setSelectedStatusTab] = useState<'PENDENTES' | 'CONCLUIDAS' | 'CESTA_BASICA'>('PENDENTES');
 
   // Selected caution for performing descautela
   const [selectedCaution, setSelectedCaution] = useState<Caution | null>(null);
+  const [cautionToDeleteDescautela, setCautionToDeleteDescautela] = useState<Caution | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Load cautions, users and cycles
@@ -83,11 +87,15 @@ export function AdminDescautelaManager() {
     return cautions.filter(c => {
       // Status filter
       if (selectedStatusTab === 'PENDENTES') {
-        if (!['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(c.status)) {
+        if (!['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(c.status) || c.type === 'CESTA_BASICA') {
           return false;
         }
-      } else {
-        if (c.status !== 'DESCAUTELADA') {
+      } else if (selectedStatusTab === 'CONCLUIDAS') {
+        if (c.status !== 'DESCAUTELADA' || c.type === 'CESTA_BASICA') {
+          return false;
+        }
+      } else if (selectedStatusTab === 'CESTA_BASICA') {
+        if (c.type !== 'CESTA_BASICA') {
           return false;
         }
       }
@@ -129,11 +137,15 @@ export function AdminDescautelaManager() {
 
   // Counts
   const pendentesCount = useMemo(() => {
-    return cautions.filter(c => ['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(c.status)).length;
+    return cautions.filter(c => ['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(c.status) && c.type !== 'CESTA_BASICA').length;
   }, [cautions]);
 
   const concluidasCount = useMemo(() => {
-    return cautions.filter(c => c.status === 'DESCAUTELADA').length;
+    return cautions.filter(c => c.status === 'DESCAUTELADA' && c.type !== 'CESTA_BASICA').length;
+  }, [cautions]);
+
+  const cestaBasicaCount = useMemo(() => {
+    return cautions.filter(c => c.type === 'CESTA_BASICA' && c.status !== 'RASCUNHO').length;
   }, [cautions]);
 
   // Download PDF helper
@@ -229,6 +241,21 @@ export function AdminDescautelaManager() {
             {concluidasCount}
           </span>
         </button>
+
+        <button
+          onClick={() => setSelectedStatusTab('CESTA_BASICA')}
+          className={`pb-3 px-4 font-semibold text-sm flex items-center border-b-2 transition-colors ${
+            selectedStatusTab === 'CESTA_BASICA'
+              ? 'border-red-600 text-red-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4 mr-2 text-emerald-600" />
+          Cestas Básicas
+          <span className="ml-2 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded-full font-bold">
+            {cestaBasicaCount}
+          </span>
+        </button>
       </div>
 
       {/* Filtros e Busca */}
@@ -298,9 +325,11 @@ export function AdminDescautelaManager() {
                           ? 'bg-blue-50 text-blue-800 border-blue-200' 
                           : caution.type === 'MATERIAL_PADRONIZADO'
                           ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : caution.type === 'CESTA_BASICA'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                           : 'bg-purple-50 text-purple-800 border-purple-200'
                       }`}>
-                        {caution.type === 'VIATURA' ? 'Viatura CBMMS' : caution.type === 'MATERIAL_PADRONIZADO' ? 'Materiais Padronizados' : 'Específica'}
+                        {caution.type === 'VIATURA' ? 'Viatura CBMMS' : caution.type === 'MATERIAL_PADRONIZADO' ? 'Materiais Padronizados' : caution.type === 'CESTA_BASICA' ? 'Cesta Básica' : 'Específica'}
                       </span>
 
                       <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${
@@ -351,6 +380,11 @@ export function AdminDescautelaManager() {
                         <FileCheck2 className="w-4 h-4 mr-2" />
                         Realizar Descautela (Receber Material)
                       </button>
+                    ) : selectedStatusTab === 'CESTA_BASICA' ? (
+                      <span className="px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold flex items-center">
+                        <ShoppingBag className="w-4 h-4 mr-1.5" />
+                        Termo de Entrega de Cesta
+                      </span>
                     ) : (
                       <span className="px-3 py-1.5 bg-green-100 text-green-800 rounded-lg text-xs font-bold flex items-center">
                         <CheckCircle2 className="w-4 h-4 mr-1.5" />
@@ -378,6 +412,17 @@ export function AdminDescautelaManager() {
                       <Eye className="w-3.5 h-3.5 mr-1.5 text-gray-500" />
                       Detalhes
                     </button>
+
+                    {caution.status === 'DESCAUTELADA' && (
+                      <button
+                        onClick={() => setCautionToDeleteDescautela(caution)}
+                        className="px-3 py-2 text-red-700 hover:text-red-900 border border-red-200 hover:bg-red-50 rounded-lg text-xs font-semibold flex items-center transition-colors"
+                        title="Excluir ou Anular Descautela (Exige Senha de Administrador e Grava na Auditoria)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                        Excluir Descautela
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -397,6 +442,16 @@ export function AdminDescautelaManager() {
           }}
         />
       )}
+
+      {/* Modal de Exclusão/Anulação Segura de Descautela com Senha do Administrador e Auditoria */}
+      <DeleteDescautelaModal
+        caution={cautionToDeleteDescautela}
+        isOpen={!!cautionToDeleteDescautela}
+        onClose={() => setCautionToDeleteDescautela(null)}
+        onSuccess={() => {
+          setCautionToDeleteDescautela(null);
+        }}
+      />
     </div>
   );
 }
@@ -446,11 +501,12 @@ function AdminDescautelaExecutionModal({
     const mapWithdrawalToReturnCondition = (wCond: string) => {
       if (!wCond) return 'SEM_ALTERACAO';
       const c = wCond.toLowerCase();
+      if (c.includes('sem') || c.includes('bom')) return 'SEM_ALTERACAO';
       if (c.includes('avaria')) return 'AVARIADO';
       if (c.includes('falta') || c.includes('extraviad')) return 'FALTANTE';
       if (c.includes('consumid')) return 'CONSUMIDO';
-      if (c.includes('alter')) return 'COM_ALTERACAO';
-      return 'SEM_ALTERACAO';
+      if (c.includes('regular') || c.includes('alter') || c.includes('desgaste')) return 'COM_ALTERACAO';
+      return 'COM_ALTERACAO';
     };
 
     const loadItems = async () => {
@@ -462,10 +518,13 @@ function AdminDescautelaExecutionModal({
 
         const initialMap: Record<string, any> = {};
         loaded.forEach(it => {
+          const initialCond = it.conditionReturn || mapWithdrawalToReturnCondition(it.conditionWithdrawal);
+          const isSemAlt = initialCond === 'SEM_ALTERACAO';
+
           initialMap[it.id] = {
             quantityReturned: it.quantityReturned !== undefined ? it.quantityReturned : it.quantity,
-            conditionReturn: it.conditionReturn || mapWithdrawalToReturnCondition(it.conditionWithdrawal),
-            observationReturn: it.observationReturn || it.observationWithdrawal || ''
+            conditionReturn: initialCond,
+            observationReturn: isSemAlt ? 'Normal' : (it.observationReturn || it.observationWithdrawal || '')
           };
         });
         setReturnItemsData(initialMap);
@@ -480,13 +539,13 @@ function AdminDescautelaExecutionModal({
   }, [caution]);
 
   const markAllOk = () => {
-    setReturnItemsData(prev => {
+    setReturnItemsData(() => {
       const next: Record<string, any> = {};
       items.forEach(it => {
         next[it.id] = {
           quantityReturned: it.quantity,
           conditionReturn: 'SEM_ALTERACAO',
-          observationReturn: prev[it.id]?.observationReturn || ''
+          observationReturn: 'Normal'
         };
       });
       return next;
@@ -871,10 +930,23 @@ function AdminDescautelaExecutionModal({
                                     value={cur.conditionReturn}
                                     onChange={(e) => {
                                       const val = e.target.value;
-                                      setReturnItemsData(prev => ({
-                                        ...prev,
-                                        [item.id]: { ...prev[item.id], conditionReturn: val }
-                                      }));
+                                      setReturnItemsData(prev => {
+                                        const currentItemState = prev[item.id] || { quantityReturned: item.quantity, conditionReturn: 'SEM_ALTERACAO', observationReturn: 'Normal' };
+                                        let newObs = currentItemState.observationReturn;
+                                        if (val === 'SEM_ALTERACAO') {
+                                          newObs = 'Normal';
+                                        } else if (newObs === 'Normal') {
+                                          newObs = item.observationWithdrawal || '';
+                                        }
+                                        return {
+                                          ...prev,
+                                          [item.id]: {
+                                            ...currentItemState,
+                                            conditionReturn: val,
+                                            observationReturn: newObs
+                                          }
+                                        };
+                                      });
                                     }}
                                     className={`p-1 border rounded text-xs focus:ring-1 focus:ring-red-500 ${
                                       cur.conditionReturn !== 'SEM_ALTERACAO'

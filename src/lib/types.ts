@@ -10,6 +10,7 @@ export interface User {
   unidade: string;
   perfil: UserPerfil;
   passwordChangeRequired: boolean;
+  firstAccessCompleted?: boolean;
   termsAccepted: boolean;
   termsVersion: string;
   termsAcceptedAt: string;
@@ -56,7 +57,7 @@ export type CautionStatus = 'RASCUNHO' | 'AGUARDANDO_ASSINATURA_MILITAR' | 'CAUT
 export interface Caution {
   id: string;
   cycleId: string;
-  type: 'MATERIAL_PADRONIZADO' | 'VIATURA' | 'ESPECIFICA';
+  type: 'MATERIAL_PADRONIZADO' | 'VIATURA' | 'ESPECIFICA' | 'CESTA_BASICA';
   status: CautionStatus;
   responsibleUserId: string;
   logisticsReceiverId?: string;
@@ -86,6 +87,11 @@ export interface Caution {
   returnRequestedAt?: string;
   returnRequestedBy?: string;
   returnRequestedByName?: string;
+  // Campos específicos do Termo de Entrega de Cesta Básica
+  cestaBasicaQtd?: number;
+  cestaBasicaVolumes?: number;
+  cestaBasicaFotos?: string[];
+  cestaBasicaObservacoes?: string;
 }
 
 export interface CautionItem {

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { AdvancedBase, Cycle, User } from '../lib/types';
-import { Send } from 'lucide-react';
-import { PlusCircle, Save, X, Edit, Trash2, MapPin, Package } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { logAudit } from '../lib/audit';
+import { DeleteBaseModal } from './DeleteBaseModal';
+import { Send, PlusCircle, Save, X, Edit, Trash2, MapPin, Package, CheckCircle2 } from 'lucide-react';
 
 export function AdvancedBaseManager() {
+  const { userProfile } = useAuth();
   const [bases, setBases] = useState<AdvancedBase[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingBase, setEditingBase] = useState<AdvancedBase | null>(null);
@@ -17,6 +20,9 @@ export function AdvancedBaseManager() {
   const [active, setActive] = useState(true);
 
   const [showSendModal, setShowSendModal] = useState<AdvancedBase | null>(null);
+  const [baseToDelete, setBaseToDelete] = useState<AdvancedBase | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedCycle, setSelectedCycle] = useState('');
@@ -144,29 +150,94 @@ export function AdvancedBaseManager() {
 
       if (editingBase) {
         await updateDoc(doc(db, 'advancedBases', editingBase.id), data);
+
+        // Registrar auditoria da atualização de base ou alteração/remoção de seus materiais
+        const adminIdent = `${userProfile?.postoGraduacao || ''} ${userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula || 'ADMIN'}`.trim();
+        const matSummary = validMaterials.length > 0 
+          ? validMaterials.map((m: string) => {
+              try {
+                const parsed = JSON.parse(m);
+                return `${parsed.quantity} ${parsed.unit} ${parsed.description}`;
+              } catch {
+                return m;
+              }
+            }).join('; ')
+          : 'Nenhum material';
+
+        await logAudit(
+          'EDITAR_BASE_AVANCADA',
+          userProfile,
+          `O administrador ${adminIdent} (Matrícula: ${userProfile?.matricula || 'N/A'}) alterou a Base Avançada "${name}" (ID: ${editingBase.id}, Status: ${active ? 'Ativa' : 'Inativa'}). Materiais configurados (${validMaterials.length} itens): [${matSummary}].`
+        );
+
+        setNotification({
+          type: 'success',
+          message: `Base Avançada "${name}" atualizada com sucesso.`
+        });
       } else {
-        await addDoc(collection(db, 'advancedBases'), data);
+        const newDoc = await addDoc(collection(db, 'advancedBases'), data);
+
+        const adminIdent = `${userProfile?.postoGraduacao || ''} ${userProfile?.nomeGuerra || userProfile?.nomeCompleto || userProfile?.matricula || 'ADMIN'}`.trim();
+        const matSummary = validMaterials.length > 0 
+          ? validMaterials.map((m: string) => {
+              try {
+                const parsed = JSON.parse(m);
+                return `${parsed.quantity} ${parsed.unit} ${parsed.description}`;
+              } catch {
+                return m;
+              }
+            }).join('; ')
+          : 'Nenhum material';
+
+        await logAudit(
+          'CRIAR_BASE_AVANCADA',
+          userProfile,
+          `O administrador ${adminIdent} (Matrícula: ${userProfile?.matricula || 'N/A'}) cadastrou a Base Avançada "${name}" (ID: ${newDoc.id}). Materiais vinculados (${validMaterials.length} itens): [${matSummary}].`
+        );
+
+        setNotification({
+          type: 'success',
+          message: `Base Avançada "${name}" cadastrada com sucesso.`
+        });
       }
+      setTimeout(() => setNotification(null), 5000);
       setShowForm(false);
     } catch (err) {
       console.error('Error saving base:', err);
-      alert('Erro ao salvar base.');
+      setNotification({
+        type: 'error',
+        message: 'Erro ao salvar base avançada.'
+      });
+      setTimeout(() => setNotification(null), 5000);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta base avançada?')) {
-      try {
-        await deleteDoc(doc(db, 'advancedBases', id));
-      } catch (err) {
-        console.error('Error deleting base:', err);
-        alert('Erro ao excluir base.');
-      }
-    }
+  const handleDelete = (base: AdvancedBase) => {
+    setBaseToDelete(base);
   };
 
   return (
     <div className="space-y-6">
+      {notification && (
+        <div className={`p-4 rounded-xl text-xs font-bold border flex items-center justify-between ${
+          notification.type === 'success' 
+            ? 'bg-green-50 border-green-200 text-green-900' 
+            : 'bg-red-50 border-red-200 text-red-900'
+        }`}>
+          <div className="flex items-center space-x-2">
+            {notification.type === 'success' && <CheckCircle2 className="w-4 h-4 text-green-700 shrink-0" />}
+            <span>{notification.message}</span>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setNotification(null)}
+            className="text-gray-400 hover:text-gray-600 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Bases Avançadas</h2>
@@ -319,7 +390,7 @@ export function AdvancedBaseManager() {
               <div className="flex space-x-1">
                 <button onClick={() => setShowSendModal(base)} title="Enviar Cautela para Militar" className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded mr-2 flex items-center"><Send className="w-4 h-4 mr-1"/> Enviar Cautela</button>
                 <button onClick={() => handleOpenForm(base)} className="p-1.5 text-gray-400 hover:text-gray-900 rounded"><Edit className="w-4 h-4"/></button>
-                <button onClick={() => handleDelete(base.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded"><Trash2 className="w-4 h-4"/></button>
+                <button onClick={() => handleDelete(base)} title="Excluir Base Avançada (requer senha de administrador)" className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4"/></button>
               </div>
             </div>
             {base.description && <p className="text-xs text-gray-500 mb-3">{base.description}</p>}
@@ -349,6 +420,24 @@ export function AdvancedBaseManager() {
           </div>
         )}
       </div>
+
+      {/* Modal de Exclusão de Base com Senha de Administrador e Auditoria */}
+      {baseToDelete && (
+        <DeleteBaseModal
+          base={baseToDelete}
+          isOpen={!!baseToDelete}
+          onClose={() => setBaseToDelete(null)}
+          onSuccess={() => {
+            const deletedName = baseToDelete.name;
+            setBaseToDelete(null);
+            setNotification({
+              type: 'success',
+              message: `Base Avançada "${deletedName}" excluída com sucesso! Exclusão e lista de materiais registradas na auditoria institucional.`
+            });
+            setTimeout(() => setNotification(null), 6000);
+          }}
+        />
+      )}
     </div>
   );
 }

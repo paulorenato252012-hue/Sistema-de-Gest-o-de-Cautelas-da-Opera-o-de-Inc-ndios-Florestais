@@ -33,6 +33,7 @@ import { AdminDashboard } from './AdminDashboard';
 import { AdminAuditLogs } from './AdminAuditLogs';
 import { AdvancedBaseManager } from './AdvancedBaseManager';
 import { DescautelaModal } from './DescautelaModal';
+import { DeleteCautionModal } from './DeleteCautionModal';
 import { useNavigate } from 'react-router-dom';
 
 export function AdminPanel() {
@@ -44,7 +45,7 @@ export function AdminPanel() {
     const unsub = onSnapshot(collection(db, 'cautions'), (snap) => {
       const pending = snap.docs.filter(d => {
         const data = d.data();
-        return ['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(data.status);
+        return ['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(data.status) && data.type !== 'CESTA_BASICA';
       }).length;
       setPendingDescautelaCount(pending);
     });
@@ -164,6 +165,7 @@ function CycleManager() {
   const [downloadingCautionId, setDownloadingCautionId] = useState<string | null>(null);
   const [downloadingAllForCycle, setDownloadingAllForCycle] = useState<string | null>(null);
   const [descautelaCaution, setDescautelaCaution] = useState<Caution | null>(null);
+  const [cautionToDelete, setCautionToDelete] = useState<Caution | null>(null);
 
   // Estados de confirmação e notificação para exclusão de ciclo
   const [cycleToDelete, setCycleToDelete] = useState<Cycle | null>(null);
@@ -555,9 +557,11 @@ function CycleManager() {
                                       ? 'bg-blue-50 text-blue-800' 
                                       : caution.type === 'MATERIAL_PADRONIZADO'
                                       ? 'bg-amber-50 text-amber-800'
+                                      : caution.type === 'CESTA_BASICA'
+                                      ? 'bg-emerald-50 text-emerald-800'
                                       : 'bg-purple-50 text-purple-800'
                                   }`}>
-                                    {caution.type === 'VIATURA' ? 'Viatura' : caution.type === 'MATERIAL_PADRONIZADO' ? 'Kit Padronizado' : 'Específica'}
+                                    {caution.type === 'VIATURA' ? 'Viatura' : caution.type === 'MATERIAL_PADRONIZADO' ? 'Kit Padronizado' : caution.type === 'CESTA_BASICA' ? 'Cesta Básica' : 'Específica'}
                                   </span>
 
                                   <span className={`px-2 py-0.5 text-[11px] font-bold rounded ${
@@ -588,7 +592,7 @@ function CycleManager() {
 
                               <div className="flex flex-wrap items-center gap-2 shrink-0">
                                 {/* Ícone e ação de Realizar Descautela exclusivo para Administradores */}
-                                {['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(caution.status || '') && (
+                                {['CAUTELADA', 'DEVOLUCAO_INICIADA', 'COM_DIVERGENCIA'].includes(caution.status || '') && caution.type !== 'CESTA_BASICA' && (
                                   <button
                                     onClick={() => setDescautelaCaution(caution)}
                                     className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center shadow-xs transition-colors"
@@ -639,6 +643,15 @@ function CycleManager() {
                                   <Eye className="w-3.5 h-3.5 mr-1.5" />
                                   Visualizar
                                 </button>
+
+                                <button
+                                  onClick={() => setCautionToDelete(caution)}
+                                  className="px-3 py-1.5 text-red-700 hover:text-red-900 border border-red-200 hover:bg-red-50 rounded-lg transition-colors flex items-center text-xs font-bold"
+                                  title="Excluir Cautela (Exige Senha do Administrador)"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                  Excluir
+                                </button>
                               </div>
                             </div>
                           );
@@ -659,6 +672,20 @@ function CycleManager() {
           caution={descautelaCaution}
           onClose={() => setDescautelaCaution(null)}
           onSuccess={() => setDescautelaCaution(null)}
+        />
+      )}
+
+      {/* Modal de Exclusão de Cautela com Senha do Administrador e Auditoria */}
+      {cautionToDelete && (
+        <DeleteCautionModal
+          caution={cautionToDelete}
+          isOpen={!!cautionToDelete}
+          onClose={() => setCautionToDelete(null)}
+          onSuccess={() => {
+            setCautionToDelete(null);
+            setCycleNotification({ type: 'success', message: 'Cautela excluída com sucesso e registrada na auditoria institucional!' });
+            setTimeout(() => setCycleNotification(null), 5000);
+          }}
         />
       )}
 
@@ -744,7 +771,7 @@ function UserManager() {
   
   const [formData, setFormData] = useState({ 
     authUid: '', matricula: '', nomeCompleto: '', nomeGuerra: '', 
-    postoGraduacao: 'SD BM', unidade: 'QCG', perfil: 'MILITAR' as User['perfil'], ativo: true 
+    postoGraduacao: 'SD BM', email: '', unidade: 'QCG', perfil: 'MILITAR' as User['perfil'], ativo: true 
   });
 
   useEffect(() => {
@@ -960,6 +987,7 @@ function UserManager() {
           nomeCompleto: formData.nomeCompleto,
           nomeGuerra: formData.nomeGuerra,
           postoGraduacao: formData.postoGraduacao,
+          email: formData.email.trim() || `${cleanMatricula}@cbmms.internal`,
           unidade: formData.unidade,
           perfil: formData.perfil,
           ativo: formData.ativo,
@@ -1014,7 +1042,7 @@ function UserManager() {
           nomeCompleto: formData.nomeCompleto,
           nomeGuerra: formData.nomeGuerra,
           postoGraduacao: formData.postoGraduacao,
-          email: `${cleanMatricula}@cbmms.internal`,
+          email: formData.email.trim() || `${cleanMatricula}@cbmms.internal`,
           unidade: formData.unidade,
           perfil: formData.perfil,
           passwordChangeRequired: true,
@@ -1041,7 +1069,7 @@ function UserManager() {
       }
       setShowForm(false);
       setEditingId(null);
-      setFormData({ authUid: '', matricula: '', nomeCompleto: '', nomeGuerra: '', postoGraduacao: 'SD BM', unidade: 'QCG', perfil: 'MILITAR', ativo: true });
+      setFormData({ authUid: '', matricula: '', nomeCompleto: '', nomeGuerra: '', postoGraduacao: 'SD BM', email: '', unidade: 'QCG', perfil: 'MILITAR', ativo: true });
     } catch (err) {
       console.error(err);
       setNotification({
@@ -1059,6 +1087,7 @@ function UserManager() {
       nomeCompleto: user.nomeCompleto, 
       nomeGuerra: user.nomeGuerra || '', 
       postoGraduacao: user.postoGraduacao, 
+      email: user.email?.endsWith('@cbmms.internal') ? '' : (user.email || ''),
       unidade: user.unidade, 
       perfil: user.perfil, 
       ativo: user.ativo 
@@ -1067,7 +1096,25 @@ function UserManager() {
     setShowForm(true);
   };
 
+  const isUserComplete = (u: User) => {
+    const mat = (u.matricula || '').trim().toLowerCase();
+    // Administradores principais são sempre completos
+    if (mat === '123456' || mat === 'admin' || mat === 'paulorenato252012') return true;
+
+    // Usuário que já concluiu o primeiro acesso
+    if (u.firstAccessCompleted === true) return true;
+
+    // Se já aceitou os termos e não tem pendência obrigatória de troca de senha no primeiro acesso
+    if (u.termsAccepted === true && u.passwordChangeRequired === false) return true;
+
+    // Se possui firstAccessCompleted explicitamente false, ou não aceitou os termos ou tem pendência de senha inicial
+    return false;
+  };
+
   const filteredUsers = users.filter(u => {
+    // Apenas usuários que completaram o primeiro acesso são exibidos no perfil de efetivo cadastrado
+    if (!isUserComplete(u)) return false;
+
     if (filterRole !== 'TODOS' && u.perfil !== filterRole) return false;
     if (searchUser.trim()) {
       const term = searchUser.toLowerCase();
@@ -1082,7 +1129,8 @@ function UserManager() {
     return true;
   });
 
-  const adminCount = users.filter(u => u.perfil === 'ADMINISTRADOR').length;
+  const completedUsers = users.filter(isUserComplete);
+  const adminCount = completedUsers.filter(u => u.perfil === 'ADMINISTRADOR').length;
 
   return (
     <div className="space-y-6">
@@ -1142,7 +1190,9 @@ function UserManager() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Efetivo Cadastrado</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Gerencie os militares e promova novos administradores.</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {completedUsers.length} {completedUsers.length === 1 ? 'militar com cadastro concluído' : 'militares com cadastro concluído'}.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
@@ -1158,7 +1208,7 @@ function UserManager() {
             onClick={() => {
               setShowForm(!showForm);
               setEditingId(null);
-              setFormData({ authUid: '', matricula: '', nomeCompleto: '', nomeGuerra: '', postoGraduacao: 'SD BM', unidade: 'QCG', perfil: 'MILITAR', ativo: true });
+              setFormData({ authUid: '', matricula: '', nomeCompleto: '', nomeGuerra: '', postoGraduacao: 'SD BM', email: '', unidade: 'QCG', perfil: 'MILITAR', ativo: true });
             }} 
             className="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 text-xs font-bold flex items-center shadow-xs transition-colors shrink-0"
           >
@@ -1262,6 +1312,17 @@ function UserManager() {
           </div>
 
           <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">E-mail Cadastrado (Recuperação e PDFs)</label>
+            <input 
+              type="email" 
+              className="w-full border border-gray-300 rounded-lg p-2 text-sm" 
+              value={formData.email} 
+              onChange={e => setFormData({...formData, email: e.target.value.toLowerCase()})} 
+              placeholder="Ex: militar@gmail.com ou militar@cbm.ms.gov.br" 
+            />
+          </div>
+
+          <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">Perfil de Acesso</label>
             <select className="w-full border border-gray-300 rounded-lg p-2 text-sm font-semibold" value={formData.perfil} onChange={e => setFormData({...formData, perfil: e.target.value as User['perfil']})}>
               <option value="MILITAR">MILITAR (Cautelas e Assinaturas)</option>
@@ -1312,6 +1373,9 @@ function UserManager() {
                     </div>
                     <p className="text-xs text-gray-500">
                       {user.nomeCompleto} • {user.unidade || 'CBMMS'}
+                      {user.email && !user.email.endsWith('@cbmms.internal') && (
+                        <span className="ml-2 text-gray-400 font-mono text-[11px]">• {user.email}</span>
+                      )}
                     </p>
                   </div>
 

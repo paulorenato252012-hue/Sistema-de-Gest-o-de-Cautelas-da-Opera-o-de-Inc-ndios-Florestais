@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
-import { Flame, Share2, ShieldCheck, UserCheck, KeyRound, Info, Wrench, Eye, EyeOff } from 'lucide-react';
+import { Flame, Share2, ShieldCheck, UserCheck, KeyRound, Info, Wrench, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import { ShareInstallModal } from '../components/ShareInstallModal';
+import { PasswordResetModal } from '../components/PasswordResetModal';
 
 export function Login() {
   const [perfilAcesso, setPerfilAcesso] = useState<'MILITAR' | 'ADMINISTRADOR'>('MILITAR');
@@ -15,6 +16,7 @@ export function Login() {
   const [infoMessage, setInfoMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const navigate = useNavigate();
 
   // Senha padrão institucional exibida exclusivamente para Militares do Ciclo
@@ -144,6 +146,7 @@ export function Login() {
               unidade: existingData?.unidade || (isRoleAdmin ? 'DPA' : 'QCG'),
               ativo: true,
               passwordChangeRequired: true, // Redireciona para personalizar dados e senha
+              firstAccessCompleted: false,
               termsAccepted: false,
               termsVersion: 'v1.0',
               termsAcceptedAt: null,
@@ -321,12 +324,24 @@ export function Login() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-gray-400 mt-1">
-              {perfilAcesso === 'MILITAR'
-                ? `No primeiro acesso, use a senha padrão ${SENHA_PADRAO_MILITAR} ou sua senha cadastrada.`
-                : 'Insira sua senha de administrador cadastrada ou a senha institucional fornecida.'
-              }
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-[11px] text-gray-400">
+                {perfilAcesso === 'MILITAR'
+                  ? `No primeiro acesso, use a senha padrão ${SENHA_PADRAO_MILITAR} ou sua senha cadastrada.`
+                  : 'Insira sua senha de administrador cadastrada ou a senha institucional fornecida.'
+                }
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setShowResetModal(true);
+                }}
+                className="text-[11px] font-bold text-red-800 hover:text-red-950 hover:underline shrink-0 ml-2"
+              >
+                Esqueci a senha
+              </button>
+            </div>
           </div>
 
           <div className="pt-2">
@@ -360,6 +375,12 @@ export function Login() {
         <ShareInstallModal
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
+        />
+
+        <PasswordResetModal
+          isOpen={showResetModal}
+          onClose={() => setShowResetModal(false)}
+          defaultMatricula={matricula}
         />
       </div>
     </div>

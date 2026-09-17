@@ -82,7 +82,7 @@ service cloud.firestore {
     // Caution Validation
     function isValidCaution(data) {
       return data.keys().hasAll(['type', 'status', 'responsibleUserId'])
-          && data.type in ['MATERIAL_PADRONIZADO', 'VIATURA', 'ESPECIFICA']
+          && data.type in ['MATERIAL_PADRONIZADO', 'VIATURA', 'ESPECIFICA', 'CESTA_BASICA']
           && data.status in ['RASCUNHO', 'AGUARDANDO_ASSINATURA_MILITAR', 'CAUTELADA', 'DEVOLUCAO_INICIADA', 'AGUARDANDO_RECEBIMENTO_LOGISTICA', 'DESCAUTELADA', 'CANCELADA', 'COM_DIVERGENCIA']
           && data.responsibleUserId is string && data.responsibleUserId.size() <= 128;
     }
@@ -138,6 +138,18 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
     match /auditEvents/{eventId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Email dispatch collection (compatible with Firebase Trigger Email extension / backend worker)
+    match /mail/{mailId} {
+      allow create: if true;
+      allow read, write: if isSignedIn();
+    }
+
+    // Password reset requests
+    match /password_resets/{resetId} {
+      allow create: if true;
       allow read, write: if isSignedIn();
     }
   }
