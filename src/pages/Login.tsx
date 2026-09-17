@@ -41,7 +41,7 @@ export function Login() {
     setLoading(true);
 
     try {
-      const internalEmail = `${cleanMatricula}@dpa.internal`;
+      const internalEmail = `${cleanMatricula}@cbmms.internal`;
       
       // 1. Tentar login direto no Firebase Auth
       try {
@@ -93,12 +93,12 @@ export function Login() {
           if (perfilAcesso === 'ADMINISTRADOR') {
             // O primeiro acesso para novos administradores deve ser realizado SOMENTE com a senha padrão dpa_admin
             if (senha !== SENHA_PADRAO_ADMIN) {
-              setError('O primeiro acesso para novos administradores deve ser realizado somente com a senha padrão: dpa_admin');
+              setError('Senha incorreta. Se este for o seu primeiro acesso como administrador, utilize a senha padrão: dpa_admin');
               return;
             }
           } else {
             if (!isDefaultMilitarPass && senha.length < 6) {
-              setError(`Para o primeiro acesso como militar do ciclo, use a senha padrão: ${SENHA_PADRAO_MILITAR}`);
+              setError(`Senha incorreta. Para o primeiro acesso como militar, use a senha padrão: ${SENHA_PADRAO_MILITAR}`);
               return;
             }
           }
@@ -302,6 +302,7 @@ export function Login() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
+                autoComplete="current-password"
                 className="w-full px-3.5 py-2.5 pr-10 bg-gray-50 border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-all"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}

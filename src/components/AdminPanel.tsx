@@ -820,7 +820,7 @@ function UserManager() {
       let isAuthorized = false;
       try {
         const cleanAdminMat = (userProfile?.matricula || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        const adminEmail = currentUser?.email || `${cleanAdminMat}@dpa.internal`;
+        const adminEmail = currentUser?.email || `${cleanAdminMat}@cbmms.internal`;
         await signInWithEmailAndPassword(auth, adminEmail, adminActionPassword.trim());
         isAuthorized = true;
       } catch (authErr: any) {
@@ -1014,7 +1014,7 @@ function UserManager() {
           nomeCompleto: formData.nomeCompleto,
           nomeGuerra: formData.nomeGuerra,
           postoGraduacao: formData.postoGraduacao,
-          email: `${cleanMatricula}@dpa.internal`,
+          email: `${cleanMatricula}@cbmms.internal`,
           unidade: formData.unidade,
           perfil: formData.perfil,
           passwordChangeRequired: true,
@@ -1427,6 +1427,7 @@ function UserManager() {
                   <div className="relative">
                     <input
                       type={showAdminActionPassword ? "text" : "password"}
+                      autoComplete="current-password"
                       value={adminActionPassword}
                       onChange={(e) => {
                         setAdminActionPassword(e.target.value);

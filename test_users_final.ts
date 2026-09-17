@@ -5,12 +5,9 @@ import firebaseConfig from './firebase-applet-config.json' assert { type: "json"
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId);
 
-async function listUsers() {
-  const usersRef = collection(db, 'users');
-  const snap = await getDocs(usersRef);
-  for (const userDoc of snap.docs) {
-    const data = userDoc.data();
-    console.log(`User ${userDoc.id}: ${data.matricula} - ${data.email} - ${data.perfil}`);
-  }
+async function check() {
+  const cRef = collection(db, 'users');
+  const snap = await getDocs(cRef);
+  console.log(`Found ${snap.size} users.`);
 }
-listUsers().catch(console.error).finally(() => process.exit(0));
+check().then(() => process.exit(0));

@@ -137,7 +137,7 @@ export function DescautelaModal({ caution, onClose, onSuccess }: DescautelaModal
       // 1. Verify electronic signature password
       let authenticated = false;
       const cleanMatricula = (userProfile.matricula || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      const internalEmail = auth.currentUser?.email || `${cleanMatricula}@dpa.internal`;
+      const internalEmail = auth.currentUser?.email || `${cleanMatricula}@cbmms.internal`;
       const VALID_ADMIN_PASSWORDS = ['admin193', 'dpa_admin', 'dpa193', 'admin123456', userProfile.matricula];
 
       if (userProfile.perfil === 'ADMINISTRADOR' && VALID_ADMIN_PASSWORDS.includes(password)) {

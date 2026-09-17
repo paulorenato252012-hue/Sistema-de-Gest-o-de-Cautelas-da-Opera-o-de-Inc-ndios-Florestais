@@ -1,16 +1,21 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs, initializeFirestore } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import firebaseConfig from './firebase-applet-config.json' assert { type: "json" };
 
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId);
+const auth = getAuth(app);
 
-async function listUsers() {
+async function check() {
   const usersRef = collection(db, 'users');
   const snap = await getDocs(usersRef);
-  for (const userDoc of snap.docs) {
-    const data = userDoc.data();
-    console.log(`User ${userDoc.id}: ${data.matricula} - ${data.email} - ${data.perfil}`);
+  
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    if(data.matricula === '123456') {
+        console.log(`User data in firestore:`, data);
+    }
   }
 }
-listUsers().catch(console.error).finally(() => process.exit(0));
+check().then(() => process.exit(0)).catch(console.error);

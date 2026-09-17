@@ -34,7 +34,7 @@ export function SignatureModal({ cautionId, cautionData, type, onClose, onSucces
     try {
       // 1. Verify password
       const cleanMatricula = (userProfile.matricula || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      const internalEmail = `${cleanMatricula}@dpa.internal`;
+      const internalEmail = `${cleanMatricula}@cbmms.internal`;
       await signInWithEmailAndPassword(auth, internalEmail, password);
 
       // 2. Generate Hash

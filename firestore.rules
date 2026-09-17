@@ -42,7 +42,7 @@ service cloud.firestore {
 
     // User accounts
     match /users/{userId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
@@ -57,25 +57,25 @@ service cloud.firestore {
 
     // Cycles
     match /cycles/{cycleId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
     // Vehicles
     match /vehicles/{vehicleId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
     // Material Catalog
     match /materialCatalog/{materialId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
     // Advanced Bases
     match /advancedBases/{baseId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
@@ -89,7 +89,7 @@ service cloud.firestore {
 
     // Cautions
     match /cautions/{cautionId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create: if isSignedIn() && isValidId(cautionId) && isValidCaution(incoming());
       allow update: if isSignedIn();
       allow delete: if isSignedIn() && (
@@ -99,32 +99,32 @@ service cloud.firestore {
       
       // Subcollections inside cautions
       match /items/{itemId} {
-        allow get, list: if isSignedIn();
+        allow get, list: if true;
         allow create, update, delete: if isSignedIn();
       }
 
       match /signatures/{sigId} {
-        allow get, list: if isSignedIn();
+        allow get, list: if true;
         allow create, update, delete: if isSignedIn();
       }
 
       match /generatedDocuments/{docId} {
-        allow get, list: if isSignedIn();
+        allow get, list: if true;
         allow create, update, delete: if isSignedIn();
       }
     }
 
     // Collection Group rules (for querying items, signatures, generatedDocuments across cautions)
     match /{path=**}/items/{itemId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
     match /{path=**}/signatures/{sigId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
     match /{path=**}/generatedDocuments/{docId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
 
